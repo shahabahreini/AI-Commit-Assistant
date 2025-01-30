@@ -1,0 +1,111 @@
+{
+  "name": "ai-commit-assistant",
+  "displayName": "AI Commit Assistant",
+  "description": "Generate meaningful git commit messages using AI to improve commit quality and consistency",
+  "version": "0.0.5",
+  "icon": "images/logo.png",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ai-commit-assistant.generateCommitMessage",
+    "onCommand:ai-commit-assistant.configureSettings"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "AI Commit Assistant",
+      "properties": {
+        "aiCommitAssistant.apiProvider": {
+          "type": "string",
+          "enum": [
+            "huggingface",
+            "gemini"
+          ],
+          "enumDescriptions": [
+            "Use Google's Gemini AI for generating commit messages",
+            "Use Hugging Face models for generating commit messages"
+          ],
+          "default": "gemini",
+          "description": "Select which AI provider to use for generating commit messages"
+        },
+        "aiCommitAssistant.geminiApiKey": {
+          "type": "string",
+          "description": "API key for Google's Gemini AI"
+        },
+        "aiCommitAssistant.huggingfaceApiKey": {
+          "type": "string",
+          "description": "API key for Hugging Face"
+        },
+        "aiCommitAssistant.huggingfaceModel": {
+          "type": "string",
+          "default": "mistralai/Mistral-7B-Instruct-v0.3",
+          "description": "Model ID for Hugging Face (e.g., 'gpt2', 'facebook/bart-large-cnn')",
+          "examples": [
+            "mistralai/Mistral-7B-Instruct-v0.3",
+            "facebook/bart-large-cnn",
+            "microsoft/DialoGPT-medium"
+          ]
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ai-commit-assistant.generateCommitMessage",
+        "title": "Generate AI Commit Message",
+        "category": "AI Commit Assistant",
+        "icon": {
+          "light": "images/light-icon.png",
+          "dark": "images/dark-icon.png"
+        }
+      },
+      {
+        "command": "ai-commit-assistant.configureSettings",
+        "title": "Configure AI Commit Assistant Settings",
+        "category": "AI Commit Assistant"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.19.10",
+    "eslint": "^8.56.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.1.3",
+    "dotenv": "^16.3.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ai-commit-assistant.git"
+  }
+}
