@@ -1,3 +1,4 @@
+// src/services/api/ollama.ts
 import { OllamaResponse } from "../../config/types";
 import { debugLog } from "../debug/logger";
 
@@ -30,30 +31,41 @@ Format your response EXACTLY as:
 - <point 1>
 - <point 2 and more if needed>`;
 
-    debugLog("Calling Ollama API", { baseUrl, model });
-    debugLog("Prompt:", prompt);
+    try {
+        debugLog("Calling Ollama API", { baseUrl, model });
+        debugLog("Prompt:", prompt);
 
-    const response = await fetch(`${baseUrl}/api/generate`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            model: model,
-            prompt: prompt,
-            stream: false,
-            options: {
-                system: "You are a Git commit message generator that creates clear, concise, and informative Git commit messages based on Git diff output.",
+        const response = await fetch(`${baseUrl}/api/generate`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
             },
-        }),
-    });
+            body: JSON.stringify({
+                model: model,
+                prompt: prompt,
+                stream: false,
+                options: {
+                    system: "You are a Git commit message generator that creates clear, concise, and informative Git commit messages based on Git diff output.",
+                },
+            }),
+        });
 
-    if (!response.ok) {
-        const error = await response.text();
-        debugLog("Ollama API Error:", error);
-        throw new Error(`Ollama API error: ${response.statusText}`);
+        if (!response.ok) {
+            const error = await response.text();
+            debugLog("Ollama API Error:", error);
+            throw new Error(`Ollama API error: ${response.status} - ${response.statusText}`);
+        }
+
+        const result = (await response.json()) as OllamaResponse;
+        if (!result || !result.response) {
+            throw new Error("Invalid response from Ollama API");
+        }
+
+        return result.response;
+    } catch (error) {
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+            throw new Error("Could not connect to Ollama. Please make sure Ollama is running.");
+        }
+        throw error;
     }
-
-    const result = (await response.json()) as OllamaResponse;
-    return result.response;
 }

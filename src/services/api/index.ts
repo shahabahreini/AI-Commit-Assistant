@@ -1,3 +1,4 @@
+// src/services/api/index.ts
 import * as vscode from "vscode";
 import { ApiConfig } from "../../config/types";
 import { callGeminiAPI } from "./gemini";
@@ -35,7 +36,12 @@ export async function generateCommitMessage(config: ApiConfig, diff: string): Pr
                 // Check if Ollama is running
                 const isOllamaAvailable = await checkOllamaAvailability(config.ollamaUrl);
                 if (!isOllamaAvailable) {
-                    throw new Error(getOllamaInstallInstructions());
+                    const instructions = getOllamaInstallInstructions();
+                    await vscode.window.showErrorMessage("Ollama Connection Error", {
+                        modal: true,
+                        detail: instructions
+                    });
+                    throw new Error("Ollama is not running. Please start Ollama and try again.");
                 }
 
                 return await callOllamaAPI(config.ollamaUrl, config.model, diff);
@@ -49,13 +55,13 @@ export async function generateCommitMessage(config: ApiConfig, diff: string): Pr
         // Format the error message for display
         let errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
-        // Add more context based on the provider type
-        const contextualError = `Error with ${config.type} provider: ${errorMessage}`;
-
-        // Show error to user
-        await vscode.window.showErrorMessage(contextualError);
-
-        // Re-throw the error to be handled by the calling function
-        throw new Error(contextualError);
+        if (config.type === "ollama" && errorMessage.includes("Ollama is not running")) {
+            // Error already shown in modal above
+            throw error;
+        } else {
+            // Show regular error for other cases
+            await vscode.window.showErrorMessage(`Error with ${config.type} provider: ${errorMessage}`);
+            throw new Error(`Error with ${config.type} provider: ${errorMessage}`);
+        }
     }
 }
