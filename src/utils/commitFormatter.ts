@@ -1,6 +1,11 @@
 import { CommitMessage } from "../config/types";
 import { debugLog } from "../services/debug/logger";
 
+export function formatCommitMessage(message: CommitMessage): string {
+    return `${message.summary}\n\n${message.description}`;
+}
+
+
 export async function processResponse(response: string): Promise<CommitMessage> {
     debugLog("Processing Response:", response);
     try {

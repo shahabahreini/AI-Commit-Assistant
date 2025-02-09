@@ -1,24 +1,17 @@
 import * as vscode from "vscode";
 import { ApiConfig } from "./types";
+import { ExtensionConfig } from './types';
 
-export function getConfiguration(): {
-    apiProvider: string;
-    geminiApiKey: string;
-    huggingfaceApiKey: string;
-    huggingfaceModel: string;
-    ollamaUrl: string;
-    ollamaModel: string;
-    debug: boolean;
-} {
-    const config = vscode.workspace.getConfiguration("aiCommitAssistant");
+export function getConfiguration(): ExtensionConfig {
+    const config = vscode.workspace.getConfiguration('aiCommitAssistant');
+
     return {
-        apiProvider: config.get<string>("apiProvider") || "gemini",
-        geminiApiKey: config.get<string>("geminiApiKey") || process.env.GEMINI_API_KEY || "",
-        huggingfaceApiKey: config.get<string>("huggingfaceApiKey") || process.env.HUGGINGFACE_API_KEY || "",
-        huggingfaceModel: config.get<string>("huggingfaceModel") || "mistralai/Mistral-7B-Instruct-v0.3",
-        ollamaUrl: config.get<string>("ollamaUrl") || "http://localhost:11434",
-        ollamaModel: config.get<string>("ollamaModel") || "mistral",
-        debug: config.get<boolean>("debug") || false
+        apiProvider: config.get<"gemini" | "huggingface" | "ollama">('apiProvider', 'gemini'),
+        geminiApiKey: config.get<string>('geminiApiKey'),
+        huggingfaceApiKey: config.get<string>('huggingfaceApiKey'),
+        huggingfaceModel: config.get<string>('huggingfaceModel'),
+        ollamaModel: config.get<string>('ollamaModel'),
+        ollamaUrl: config.get<string>('ollamaUrl', 'http://localhost:11434')
     };
 }
 

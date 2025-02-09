@@ -1,10 +1,22 @@
 import * as vscode from "vscode";
 
+export type ApiProvider = "gemini" | "huggingface" | "ollama";
+
 export interface ApiConfig {
-    type: "gemini" | "huggingface" | "ollama";
+    type: ApiProvider;
     apiKey?: string;
     model?: string;
     ollamaUrl?: string;
+}
+
+export interface ExtensionConfig {
+    apiProvider: ApiProvider;
+    geminiApiKey?: string;
+    huggingfaceApiKey?: string;
+    huggingfaceModel?: string;
+    ollamaModel?: string;
+    ollamaUrl?: string;
+    debug?: boolean;
 }
 
 export interface HuggingFaceResponse {
@@ -24,4 +36,5 @@ export interface CommitMessage {
 export interface ExtensionState {
     debugChannel: vscode.OutputChannel;
     statusBarItem: vscode.StatusBarItem;
+    context?: vscode.ExtensionContext;
 }

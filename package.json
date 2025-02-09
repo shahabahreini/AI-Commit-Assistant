@@ -32,7 +32,7 @@
             "Use Hugging Face models for generating commit messages",
             "Use local Ollama models for generating commit messages"
           ],
-          "default": "gemini",
+          "default": "huggingface",
           "description": "Select which AI provider to use for generating commit messages"
         },
         "aiCommitAssistant.debug": {

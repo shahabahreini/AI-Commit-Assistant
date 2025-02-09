@@ -64,6 +64,8 @@ export async function setCommitMessage(message: CommitMessage) {
 
     const repository = repositories[0];
     if (repository) {
-        repository.inputBox.value = `${message.summary}\n\n${message.description}`;
+        const formattedMessage = message.summary + (message.description ? '\n\n' + message.description : '');
+        repository.inputBox.value = formattedMessage;
     }
 }
+
