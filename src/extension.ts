@@ -54,9 +54,9 @@ async function callOllamaAPI(
 ${diff}
 
 Requirements:
-1. First line (short description) must:
+1. First line must:
    - Start with one of: feat|fix|docs|style|refactor|test|chore
-   - Be a complete title under 62 characters
+   - Be under 72 characters
    - Use imperative mood
    - Be technical and to the point
 
@@ -86,10 +86,10 @@ Format your response EXACTLY as:
       prompt: prompt,
       stream: false,
       options: {
-        temperature: 0.1,
-        top_p: 0.95,
+        // temperature: 0.1,
+        // top_p: 0.95,
         system:
-          "You are a commit message generator that creates clear, concise, and informative commit messages.",
+          "You are a Git commit message generator that creates clear, concise, and informative Git commit messages based on Git diff output.",
       },
     }),
   });
@@ -202,7 +202,8 @@ async function processResponse(response: string): Promise<CommitMessage> {
     for (const line of lines) {
       const cleanLine = line.trim();
       if (!foundSummary && summaryPattern.test(cleanLine)) {
-        summary = cleanLine;
+        // Remove any duplicate type prefixes that might have been added
+        summary = cleanLine.replace(/(feat|fix|docs|style|refactor|test|chore):\s*(feat|fix|docs|style|refactor|test|chore):/, '$1:');
         foundSummary = true;
         continue;
       }
@@ -210,36 +211,32 @@ async function processResponse(response: string): Promise<CommitMessage> {
       // Collect bullet points after finding summary
       if (foundSummary && cleanLine) {
         if (cleanLine.startsWith("-")) {
-          bulletPoints.push(cleanLine);
+          // Clean up bullet points by removing any commit type prefixes
+          const cleanedPoint = cleanLine.replace(/^-\s*(feat|fix|docs|style|refactor|test|chore):\s*/, '- ');
+          bulletPoints.push(cleanedPoint);
         } else if (!cleanLine.startsWith("#") && !cleanLine.startsWith("*")) {
-          // If it's a regular line, convert it to bullet point
           bulletPoints.push(`- ${cleanLine}`);
         }
       }
     }
 
-    // If no valid summary was found, use the first line that looks reasonable
+    // If no valid summary was found, try to extract it from the first line
     if (!summary) {
       const firstLine = lines[0]?.trim();
-      if (firstLine && !firstLine.startsWith("-")) {
-        // Try to format it as a conventional commit
-        const type = firstLine.toLowerCase().includes("feat")
-          ? "feat"
-          : firstLine.toLowerCase().includes("fix")
-            ? "fix"
-            : firstLine.toLowerCase().includes("docs")
-              ? "docs"
-              : firstLine.toLowerCase().includes("style")
-                ? "style"
-                : firstLine.toLowerCase().includes("refactor")
-                  ? "refactor"
-                  : firstLine.toLowerCase().includes("test")
-                    ? "test"
-                    : "chore";
+      if (firstLine) {
+        // Try to extract type and description
+        const typeMatch = firstLine.match(/(feat|fix|docs|style|refactor|test|chore):/i);
+        const type = typeMatch ? typeMatch[1].toLowerCase() : "refactor";
 
-        summary = `${type}: ${firstLine.replace(/^[^:]*:\s*/, "")}`;
+        // Clean up the description
+        const description = firstLine
+          .replace(/(feat|fix|docs|style|refactor|test|chore):/ig, '')
+          .replace(/^[-:\s]+/, '')
+          .trim();
+
+        summary = `${type}: ${description}`;
       } else {
-        summary = "chore: update code";
+        summary = "refactor: update code implementation";
       }
     }
 
@@ -267,8 +264,8 @@ async function processResponse(response: string): Promise<CommitMessage> {
   } catch (error) {
     debugLog("Error Processing Response:", error);
     return {
-      summary: "chore: update code",
-      description: "- Update implementation",
+      summary: "refactor: update code structure",
+      description: "- Update implementation with necessary changes",
     };
   }
 }
@@ -288,9 +285,32 @@ function parseMarkdownContent(content: string): CommitMessage {
 }
 
 function cleanDeepSeekResponse(response: string): string {
-  response = response.replace(/<think>[\s\S]*?<\/think>/g, "");
-  response = response.replace(/<[^>]*>/g, "");
-  response = response.trim().replace(/\s+/g, " ");
+  // Remove any leading colons that DeepSeek sometimes adds
+  response = response.replace(/^:\s*/, '');
+
+  // If the response contains multiple lines with bullet points in the first line,
+  // restructure it to match our expected format
+  const lines = response.split('\n');
+
+  if (lines[0].includes('-')) {
+    // Extract the commit type and description from the first line
+    const firstLine = lines[0];
+    const match = firstLine.match(/(feat|fix|docs|style|refactor|test|chore):\s*([^-]+)/);
+
+    if (match) {
+      const [_, type, description] = match;
+      // Reconstruct the response in the correct format
+      return `${type}: ${description.trim()}\n\n${lines.join('\n')}`;
+    }
+  }
+
+  // If the response is already in the correct format, just clean it up
+  response = response
+    .replace(/<think>[\s\S]*?<\/think>/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return response;
 }
 
