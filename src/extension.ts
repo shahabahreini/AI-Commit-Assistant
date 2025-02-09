@@ -6,6 +6,7 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 let debugChannel: vscode.OutputChannel;
+let statusBarItem: vscode.StatusBarItem;
 
 // Interfaces
 interface ApiConfig {
@@ -53,25 +54,24 @@ async function callOllamaAPI(
 ${diff}
 
 Requirements:
-1. First line must:
+1. First line (short description) must:
    - Start with one of: feat|fix|docs|style|refactor|test|chore
-   - Be under 50 characters
+   - Be a complete title under 62 characters
    - Use imperative mood
-   - Summarize the change
+   - Be technical and to the point
 
 2. Leave one blank line after the first line
 
-3. Write a CONCISE description with 2-4 bullet points that explains:
-   - What changes were made
-   - Why the changes were necessary (if relevant)
-   - Impact of the changes
+3. Write a CONCISE description with optimal bullet points that explains:
+   - What and where changes were made
+   - Impact of the changes (if neccessary)
+   - Avoid buzzwords and jargons, be technical and concise
 
 Format your response EXACTLY as:
 <type>: <short description>
 
 - <point 1>
-- <point 2>
-- <point 3 if needed>`;
+- <point 2 and more if needed>`;
 
   debugLog("Calling Ollama API", { baseUrl, model });
   debugLog("Prompt:", prompt);
@@ -250,9 +250,9 @@ async function processResponse(response: string): Promise<CommitMessage> {
       .replace(/\s+/g, " ")
       .trim();
 
-    // Ensure summary is not too long
-    if (summary.length > 50) {
-      summary = summary.substring(0, 47) + "...";
+    // Ensure summary is not longer than 72 characters
+    if (summary.length > 72) {
+      summary = summary.substring(0, 69) + "...";
     }
 
     // Build description from bullet points
@@ -298,6 +298,13 @@ export async function activate(context: vscode.ExtensionContext) {
   debugChannel = vscode.window.createOutputChannel("AI Commit Assistant Debug");
   context.subscriptions.push(debugChannel);
 
+  // Create status bar item
+  statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100
+  );
+  context.subscriptions.push(statusBarItem);
+
   let toggleDebugCommand = vscode.commands.registerCommand(
     "ai-commit-assistant.toggleDebug",
     async () => {
@@ -318,12 +325,14 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         debugLog("Command Started: generateCommitMessage");
 
-        // Set generating state
+        // Set generating state and show loading indicator
         await vscode.commands.executeCommand(
           "setContext",
           "ai-commit-assistant.isGenerating",
           true
         );
+        statusBarItem.text = "$(sync~spin) Generating commit message...";
+        statusBarItem.show();
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
@@ -485,25 +494,19 @@ Guidelines:
             `Failed to set commit message in Source Control: ${errorMessage}`
           );
         }
-
-        // Reset generating state
-        await vscode.commands.executeCommand(
-          "setContext",
-          "ai-commit-assistant.isGenerating",
-          false
-        );
       } catch (error: unknown) {
-        // Reset generating state on error
-        await vscode.commands.executeCommand(
-          "setContext",
-          "ai-commit-assistant.isGenerating",
-          false
-        );
-
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         debugLog("Command Error:", error);
         vscode.window.showErrorMessage(`Error: ${errorMessage}`);
+      } finally {
+        // Reset generating state and hide status bar in all cases
+        await vscode.commands.executeCommand(
+          "setContext",
+          "ai-commit-assistant.isGenerating",
+          false
+        );
+        statusBarItem.hide();
       }
     }
   );
@@ -511,4 +514,8 @@ Guidelines:
   context.subscriptions.push(disposable);
 }
 
-export function deactivate() { }
+export function deactivate() {
+  if (statusBarItem) {
+    statusBarItem.dispose();
+  }
+}

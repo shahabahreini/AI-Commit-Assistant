@@ -2,7 +2,8 @@
   "name": "ai-commit-assistant",
   "displayName": "AI Commit Assistant",
   "description": "Generate meaningful git commit messages using AI (Gemini, Hugging Face, or Ollama) to improve commit quality and consistency",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "publisher": "ShahabBahreiniJangjoo",
   "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.75.0"
@@ -79,7 +80,10 @@
         "command": "ai-commit-assistant.generateCommitMessage",
         "title": "Generate AI Commit Message",
         "category": "AI Commit Assistant",
-        "icon": "$(sparkle)"
+        "icon": {
+          "light": "resources/light/generate.svg",
+          "dark": "resources/dark/generate.svg"
+        }
       },
       {
         "command": "ai-commit-assistant.configureSettings",
@@ -90,6 +94,14 @@
         "command": "ai-commit-assistant.toggleDebug",
         "title": "Toggle Debug Mode",
         "category": "AI Commit Assistant"
+      },
+      {
+        "command": "ai-commit-assistant.loadingIndicator",
+        "title": "Generating...",
+        "icon": {
+          "light": "resources/light/loading.svg",
+          "dark": "resources/dark/loading.svg"
+        }
       }
     ],
     "menus": {
@@ -97,7 +109,12 @@
         {
           "command": "ai-commit-assistant.generateCommitMessage",
           "group": "navigation",
-          "when": "scmProvider == git"
+          "when": "scmProvider == git && !ai-commit-assistant.isGenerating"
+        },
+        {
+          "command": "ai-commit-assistant.loadingIndicator",
+          "group": "navigation",
+          "when": "scmProvider == git && ai-commit-assistant.isGenerating"
         }
       ],
       "commandPalette": [
