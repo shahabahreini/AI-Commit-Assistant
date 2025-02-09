@@ -79,10 +79,7 @@
         "command": "ai-commit-assistant.generateCommitMessage",
         "title": "Generate AI Commit Message",
         "category": "AI Commit Assistant",
-        "icon": {
-          "light": "images/light-icon.png",
-          "dark": "images/dark-icon.png"
-        }
+        "icon": "$(sparkle)"
       },
       {
         "command": "ai-commit-assistant.configureSettings",
@@ -94,7 +91,28 @@
         "title": "Toggle Debug Mode",
         "category": "AI Commit Assistant"
       }
-    ]
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "ai-commit-assistant.generateCommitMessage",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ai-commit-assistant.generateCommitMessage",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "ai-commit-assistant.configureSettings"
+        },
+        {
+          "command": "ai-commit-assistant.toggleDebug"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

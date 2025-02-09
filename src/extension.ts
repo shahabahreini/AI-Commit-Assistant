@@ -1,4 +1,3 @@
-// src/extension.ts
 import * as vscode from "vscode";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { exec } from "child_process";
@@ -6,7 +5,6 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-let statusBarItem: vscode.StatusBarItem;
 let debugChannel: vscode.OutputChannel;
 
 // Interfaces
@@ -104,8 +102,6 @@ Format your response EXACTLY as:
   }
 
   const result = (await response.json()) as OllamaResponse;
-
-  // Clean response if using DeepSeek model
   let cleanedResponse = model.toLowerCase().includes("deepseek")
     ? cleanDeepSeekResponse(result.response)
     : result.response;
@@ -139,7 +135,9 @@ Guidelines:
 <type>: brief description (max 72 chars)
 
 # Detailed Description
-Technical details about the changes`;
+- Point 1
+- Point 2
+- Point 3 (if needed)`;
 
   debugLog("Calling Hugging Face API", { model });
   debugLog("Prompt:", prompt);
@@ -184,7 +182,6 @@ Technical details about the changes`;
 async function processResponse(response: string): Promise<CommitMessage> {
   debugLog("Processing Response:", response);
   try {
-    // Split response into lines and remove empty lines
     const lines = response
       .trim()
       .split("\n")
@@ -200,7 +197,6 @@ async function processResponse(response: string): Promise<CommitMessage> {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
-      // Skip empty lines and XML/HTML tags
       if (!line || line.match(/^<[^>]+>$/)) {
         continue;
       }
@@ -212,7 +208,6 @@ async function processResponse(response: string): Promise<CommitMessage> {
       }
 
       if (foundSummary) {
-        // Skip markdown headers and formatting markers
         if (
           line.startsWith("#") ||
           line === "---" ||
@@ -221,16 +216,13 @@ async function processResponse(response: string): Promise<CommitMessage> {
           continue;
         }
 
-        // Clean up the line
         let cleanedLine = line
-          .replace(/^\*\*[^:]+:\*\*\s*/, "") // Remove bold headers
-          .replace(/`([^`]+)`/g, "$1") // Remove code formatting
-          .replace(/\*\*/g, "") // Remove bold markers
+          .replace(/^\*\*[^:]+:\*\*\s*/, "")
+          .replace(/`([^`]+)`/g, "$1")
+          .replace(/\*\*/g, "")
           .trim();
 
-        // Add to bullet points if it's meaningful content
         if (cleanedLine) {
-          // Ensure line starts with bullet point
           if (!cleanedLine.startsWith("-")) {
             cleanedLine = "- " + cleanedLine;
           }
@@ -239,26 +231,22 @@ async function processResponse(response: string): Promise<CommitMessage> {
       }
     }
 
-    // Clean up and format the description
     if (bulletPoints.length > 0) {
       description = bulletPoints.join("\n");
     } else {
       description = "- Update implementation with necessary changes";
     }
 
-    // Clean up the summary
     summary = summary
-      .replace(/\[.*?\]/g, "") // Remove markdown-style links
-      .replace(/<[^>]+>/g, "") // Remove any remaining XML-like tags
-      .replace(/\s+/g, " ") // Normalize whitespace
+      .replace(/\[.*?\]/g, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+/g, " ")
       .trim();
 
-    // Default values if nothing is found
     if (!summary) {
       summary = "chore: update code";
     }
 
-    // Ensure summary doesn't exceed 50 characters
     if (summary.length > 50) {
       summary = summary.substring(0, 47) + "...";
     }
@@ -276,6 +264,7 @@ async function processResponse(response: string): Promise<CommitMessage> {
     };
   }
 }
+
 function parseMarkdownContent(content: string): CommitMessage {
   const summaryMatch = content.match(/# Commit Summary\s*\n([^\n#]*)/);
   const descriptionMatch = content.match(
@@ -290,66 +279,9 @@ function parseMarkdownContent(content: string): CommitMessage {
   return { summary, description };
 }
 
-function getWebviewContent(commitMessage: CommitMessage): string {
-  return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Generated Commit Message</title>
-        <style>
-            body {
-                padding: 20px;
-                line-height: 1.6;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                color: var(--vscode-editor-foreground);
-                background-color: var(--vscode-editor-background);
-            }
-            pre {
-                background-color: var(--vscode-textBlockQuote-background);
-                padding: 15px;
-                border-radius: 5px;
-                overflow-x: auto;
-                margin: 10px 0;
-            }
-            .commit-type {
-                color: var(--vscode-textLink-foreground);
-                font-weight: bold;
-            }
-            .commit-summary {
-                margin-bottom: 20px;
-            }
-            .commit-description {
-                white-space: pre-wrap;
-            }
-            h2 {
-                color: var(--vscode-editor-foreground);
-                border-bottom: 1px solid var(--vscode-textSeparator-foreground);
-                padding-bottom: 5px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="markdown-body">
-            <div class="commit-summary">
-                <h2>Commit Summary</h2>
-                <pre>${commitMessage.summary}</pre>
-            </div>
-            <div class="commit-description">
-                <h2>Detailed Description</h2>
-                <pre>${commitMessage.description}</pre>
-            </div>
-        </div>
-    </body>
-    </html>`;
-}
-
 function cleanDeepSeekResponse(response: string): string {
-  // Remove any content within <think> tags
   response = response.replace(/<think>[\s\S]*?<\/think>/g, "");
-  // Remove any remaining XML-like tags
   response = response.replace(/<[^>]*>/g, "");
-  // Clean up extra whitespace
   response = response.trim().replace(/\s+/g, " ");
   return response;
 }
@@ -357,15 +289,6 @@ function cleanDeepSeekResponse(response: string): string {
 export async function activate(context: vscode.ExtensionContext) {
   debugChannel = vscode.window.createOutputChannel("AI Commit Assistant Debug");
   context.subscriptions.push(debugChannel);
-
-  statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left
-  );
-  statusBarItem.text = "$(git-commit) AI Commit";
-  statusBarItem.command = "ai-commit-assistant.generateCommitMessage";
-  statusBarItem.tooltip = "Generate AI Commit Message";
-  context.subscriptions.push(statusBarItem);
-  statusBarItem.show();
 
   let toggleDebugCommand = vscode.commands.registerCommand(
     "ai-commit-assistant.toggleDebug",
@@ -386,7 +309,13 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       try {
         debugLog("Command Started: generateCommitMessage");
-        statusBarItem.text = "$(sync~spin) Generating commit...";
+
+        // Set generating state
+        await vscode.commands.executeCommand(
+          'setContext',
+          'ai-commit-assistant.isGenerating',
+          true
+        );
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
@@ -464,10 +393,12 @@ Guidelines:
 
 2. Format:
 # Commit Summary
-<type>: brief description (max 72 chars)
+<type>: brief description (max 50 chars)
 
 # Detailed Description
-Technical details about the changes`;
+- Point 1
+- Point 2
+- Point 3 (if needed)`;
 
           debugLog("Prompt:", promptText);
 
@@ -517,17 +448,6 @@ Technical details about the changes`;
           return;
         }
 
-        const panel = vscode.window.createWebviewPanel(
-          "commitMessage",
-          "AI Generated Commit Message",
-          vscode.ViewColumn.One,
-          {
-            enableScripts: true,
-          }
-        );
-
-        panel.webview.html = getWebviewContent(commitMessage);
-
         const gitExtension = vscode.extensions.getExtension("vscode.git");
         if (!gitExtension) {
           throw new Error("Git extension not found");
@@ -558,9 +478,21 @@ Technical details about the changes`;
           );
         }
 
-        statusBarItem.text = "$(git-commit) AI Commit";
+        // Reset generating state
+        await vscode.commands.executeCommand(
+          'setContext',
+          'ai-commit-assistant.isGenerating',
+          false
+        );
+
       } catch (error: unknown) {
-        statusBarItem.text = "$(git-commit) AI Commit";
+        // Reset generating state on error
+        await vscode.commands.executeCommand(
+          'setContext',
+          'ai-commit-assistant.isGenerating',
+          false
+        );
+
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         debugLog("Command Error:", error);
@@ -571,3 +503,5 @@ Technical details about the changes`;
 
   context.subscriptions.push(disposable);
 }
+
+export function deactivate() { }
