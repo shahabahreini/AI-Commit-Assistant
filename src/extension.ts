@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
   state.context = context;
   initializeLogger(state.debugChannel);
   debugLog('AI Commit Assistant is now active');
-
+  debugLog('Extension configuration:', vscode.workspace.getConfiguration("aiCommitAssistant"));
   // Initialize SCM provider
   const scmProvider = vscode.scm.createSourceControl('ai-commit-assistant', 'AI Commit Assistant');
   const inputBox = scmProvider.inputBox;
@@ -49,6 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const config = vscode.workspace.getConfiguration("aiCommitAssistant");
       const currentDebug = config.get<boolean>("debug") || false;
       await config.update("debug", !currentDebug, true);
+      debugLog(`Debug mode ${!currentDebug ? "enabled" : "disabled"}`);
       vscode.window.showInformationMessage(
         `Debug mode ${!currentDebug ? "enabled" : "disabled"}`
       );
