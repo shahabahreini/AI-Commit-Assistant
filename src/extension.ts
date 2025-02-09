@@ -29,7 +29,6 @@ interface CommitMessage {
   description: string;
 }
 
-// Debug logging function
 function debugLog(message: string, data?: any) {
   const config = vscode.workspace.getConfiguration("aiCommitAssistant");
   const isDebugMode = config.get<boolean>("debug") || false;
@@ -182,6 +181,11 @@ Guidelines:
 async function processResponse(response: string): Promise<CommitMessage> {
   debugLog("Processing Response:", response);
   try {
+    // Clean the response first
+    response = response
+      .replace(/\*\*/g, "") // Remove all ** markers
+      .replace(/`/g, ""); // Remove all ` markers
+
     const lines = response
       .trim()
       .split("\n")
@@ -191,71 +195,75 @@ async function processResponse(response: string): Promise<CommitMessage> {
       /^(feat|fix|docs|style|refactor|test|chore)(\([^)]+\))?:\s+[^\n]+$/i;
     let summary = "";
     let description = "";
-    let foundSummary = false;
     let bulletPoints: string[] = [];
+    let foundSummary = false;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-
-      if (!line || line.match(/^<[^>]+>$/)) {
-        continue;
-      }
-
-      if (!foundSummary && summaryPattern.test(line)) {
-        summary = line;
+    // First pass: find the summary line
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      if (!foundSummary && summaryPattern.test(cleanLine)) {
+        summary = cleanLine;
         foundSummary = true;
         continue;
       }
 
-      if (foundSummary) {
-        if (
-          line.startsWith("#") ||
-          line === "---" ||
-          line.match(/^\*\*.*\*\*$/)
-        ) {
-          continue;
-        }
-
-        let cleanedLine = line
-          .replace(/^\*\*[^:]+:\*\*\s*/, "")
-          .replace(/`([^`]+)`/g, "$1")
-          .replace(/\*\*/g, "")
-          .trim();
-
-        if (cleanedLine) {
-          if (!cleanedLine.startsWith("-")) {
-            cleanedLine = "- " + cleanedLine;
-          }
-          bulletPoints.push(cleanedLine);
+      // Collect bullet points after finding summary
+      if (foundSummary && cleanLine) {
+        if (cleanLine.startsWith("-")) {
+          bulletPoints.push(cleanLine);
+        } else if (!cleanLine.startsWith("#") && !cleanLine.startsWith("*")) {
+          // If it's a regular line, convert it to bullet point
+          bulletPoints.push(`- ${cleanLine}`);
         }
       }
     }
 
-    if (bulletPoints.length > 0) {
-      description = bulletPoints.join("\n");
-    } else {
-      description = "- Update implementation with necessary changes";
+    // If no valid summary was found, use the first line that looks reasonable
+    if (!summary) {
+      const firstLine = lines[0]?.trim();
+      if (firstLine && !firstLine.startsWith("-")) {
+        // Try to format it as a conventional commit
+        const type = firstLine.toLowerCase().includes("feat")
+          ? "feat"
+          : firstLine.toLowerCase().includes("fix")
+            ? "fix"
+            : firstLine.toLowerCase().includes("docs")
+              ? "docs"
+              : firstLine.toLowerCase().includes("style")
+                ? "style"
+                : firstLine.toLowerCase().includes("refactor")
+                  ? "refactor"
+                  : firstLine.toLowerCase().includes("test")
+                    ? "test"
+                    : "chore";
+
+        summary = `${type}: ${firstLine.replace(/^[^:]*:\s*/, "")}`;
+      } else {
+        summary = "chore: update code";
+      }
     }
 
+    // Clean up summary
     summary = summary
       .replace(/\[.*?\]/g, "")
       .replace(/<[^>]+>/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    if (!summary) {
-      summary = "chore: update code";
-    }
-
+    // Ensure summary is not too long
     if (summary.length > 50) {
       summary = summary.substring(0, 47) + "...";
     }
 
+    // Build description from bullet points
+    if (bulletPoints.length > 0) {
+      description = bulletPoints.join("\n");
+    } else {
+      description = "- Update implementation with necessary changes";
+    }
+
     debugLog("Processed Commit Message:", { summary, description });
-    return {
-      summary,
-      description,
-    };
+    return { summary, description };
   } catch (error) {
     debugLog("Error Processing Response:", error);
     return {
@@ -312,8 +320,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Set generating state
         await vscode.commands.executeCommand(
-          'setContext',
-          'ai-commit-assistant.isGenerating',
+          "setContext",
+          "ai-commit-assistant.isGenerating",
           true
         );
 
@@ -480,16 +488,15 @@ Guidelines:
 
         // Reset generating state
         await vscode.commands.executeCommand(
-          'setContext',
-          'ai-commit-assistant.isGenerating',
+          "setContext",
+          "ai-commit-assistant.isGenerating",
           false
         );
-
       } catch (error: unknown) {
         // Reset generating state on error
         await vscode.commands.executeCommand(
-          'setContext',
-          'ai-commit-assistant.isGenerating',
+          "setContext",
+          "ai-commit-assistant.isGenerating",
           false
         );
 

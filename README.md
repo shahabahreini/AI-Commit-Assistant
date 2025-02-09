@@ -1,33 +1,40 @@
 # AI Commit Assistant for VS Code
 
-Generate meaningful and consistent git commit messages using AI to enhance your development workflow. This extension supports both Google's Gemini AI and Hugging Face models for generating commit messages.
+Generate meaningful and consistent git commit messages using AI. This extension supports multiple AI providers including Google's Gemini AI, Hugging Face models, and Ollama for generating conventional commit messages.
 
 ## Features
 
-Transform your commit process with AI-powered assistance:
-
-- **Dual AI Support**: Choose between Google's Gemini AI or Hugging Face models
-- **Smart Analysis**: Automatically analyzes staged and unstaged changes
-- **Conventional Commits**: Generates standardized commit messages following conventional commit format
-- **Interactive Preview**: View generated commits in a formatted webview before applying
-- **Status Bar Integration**: Quick access through VS Code's status bar
-- **Efficient Workflow**: Automatically populates the Source Control input box
+- **Multiple AI Provider Support**:
+  - Google's Gemini AI
+  - Hugging Face models
+  - Ollama (local inference)
+- **Smart Git Integration**:
+  - Automatic analysis of staged changes
+  - Support for unstaged changes with user confirmation
+  - Direct integration with VS Code's Source Control
+- **Conventional Commits Format**:
+  - Standardized commit message structure
+  - Type categorization (feat, fix, docs, style, refactor, test, chore)
+  - Concise summary (50 characters) with detailed bullet-point description
+- **Debug Mode**:
+  - Toggleable debug logging
+  - Detailed API interaction tracking
+  - Timestamp-based logging for troubleshooting
 
 ## Requirements
 
-Before you begin, ensure you have:
-
 - Visual Studio Code ^1.74.0
-- Git installed and initialized in your workspace
-- API Key for your chosen provider:
-  - Google Gemini API key, or
+- Git installed and initialized in workspace
+- One of the following API configurations:
+  - Google Gemini API key
   - Hugging Face API key
+  - Ollama running locally
 
 ## Installation
 
 1. Install from VS Code Marketplace
-2. Configure your API key(s) in VS Code settings
-3. Start generating AI-powered commit messages
+2. Configure your preferred API provider in VS Code settings
+3. Start generating commit messages
 
 ### Compile
 
@@ -43,85 +50,53 @@ vsce package
 
 ## Configuration
 
-Configure the extension through VS Code settings:
-
 ```json
 {
-  "aiCommitAssistant.apiProvider": "gemini",     // Choose "gemini" or "huggingface"
-  "aiCommitAssistant.geminiApiKey": "",          // Your Gemini API key
-  "aiCommitAssistant.huggingfaceApiKey": "",     // Your Hugging Face API key
-  "aiCommitAssistant.huggingfaceModel": ""       // Hugging Face model ID
+  "aiCommitAssistant.apiProvider": "gemini",     // "gemini", "huggingface", or "ollama"
+  "aiCommitAssistant.geminiApiKey": "",          // Gemini API key
+  "aiCommitAssistant.huggingfaceApiKey": "",     // Hugging Face API key
+  "aiCommitAssistant.huggingfaceModel": "",      // Hugging Face model ID
+  "aiCommitAssistant.ollamaUrl": "",            // Ollama URL (default: http://localhost:11434)
+  "aiCommitAssistant.ollamaModel": "",          // Ollama model (default: mistral)
+  "aiCommitAssistant.debug": false              // Enable/disable debug mode
 }
 ```
 
-### Default Hugging Face Model
+### Default Models
 
-The extension uses `mistralai/Mistral-7B-Instruct-v0.3` by default. Other supported models include:
-
-- `facebook/bart-large-cnn`
-- `microsoft/DialoGPT-medium`
+- **Hugging Face**: `mistralai/Mistral-7B-Instruct-v0.3`
+- **Ollama**: `mistral`
+- **Gemini**: `gemini-pro`
 
 ## Usage
 
-1. Stage your changes in Git (optional - works with unstaged changes too)
-2. Access the extension through:
-   - Status bar "AI Commit" button
+1. Stage your changes in Git (optional)
+2. Access the extension via:
    - Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) - "Generate AI Commit Message"
-3. Review the generated message in the preview window
-4. The message will automatically populate your Source Control input
+   - Source Control panel press "sparkle" icon
+3. Review and edit the generated message
+4. Commit your changes
 
-## Features in Detail
+## Generated Commit Structure
 
-### Commit Message Structure
+1. **Summary Line** (max 50 characters):
+   - Starts with type (feat|fix|docs|style|refactor|test|chore)
+   - Uses imperative mood
+   - Clearly summarizes the change
 
-- **Summary**: Follows conventional commits format (feat:, fix:, docs:, etc.)
-- **Description**: Detailed technical explanation of changes
-- **Format**: Automatically formatted to Git best practices
-
-### AI Integration
-
-- **Gemini AI**: Optimized for technical content and code analysis
-- **Hugging Face**: Flexible model selection for different use cases
-
-## Known Issues
-
-Please be aware of the following:
-
-- Large diffs may take longer to process
-- API keys must be configured before first use
-- Some Hugging Face models may have varying response formats
-
-## Release Notes
-
-### 0.0.5
-
-- Added support for Hugging Face models
-- Improved error handling and user feedback
-- Added status bar integration
-- Enhanced commit message preview
-
-### 0.0.4
-
-- Initial release with Gemini AI support
-- Basic commit message generation
-- Conventional commits format support
-
-## Contributing
-
-Found a bug or have a feature request? Please open an issue on our GitHub repository.
-
-## License
-
-This extension is licensed under the MIT License.
+2. **Description**:
+   - 2-4 bullet points
+   - Explains what changes were made
+   - Describes why changes were necessary
+   - Notes impact of changes
 
 ## Privacy Notice
 
-This extension processes git diff information through:
+This extension processes git diff information through the configured AI service. No personal or sensitive information is collected or stored. Debug logs are only stored locally when debug mode is enabled.
 
-- Google's Gemini AI service, and/or
-- Hugging Face's API service
+## License
 
-No personal or sensitive information is collected or stored.
+MIT License
 
 ---
-**Note**: Configure your preferred API key in VS Code settings before first use.
+**Note**: Configure your preferred API provider and key in VS Code settings before first use.
