@@ -1,19 +1,15 @@
 {
   "name": "ai-commit-assistant",
   "displayName": "AI Commit Assistant",
-  "description": "Generate meaningful git commit messages using AI to improve commit quality and consistency",
-  "version": "0.0.5",
+  "description": "Generate meaningful git commit messages using AI (Gemini, Hugging Face, or Ollama) to improve commit quality and consistency",
+  "version": "0.1.3",
   "icon": "images/logo.png",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "SCM Providers",
     "Other"
-  ],
-  "activationEvents": [
-    "onCommand:ai-commit-assistant.generateCommitMessage",
-    "onCommand:ai-commit-assistant.configureSettings"
   ],
   "extensionDependencies": [
     "vscode.git"
@@ -26,15 +22,22 @@
         "aiCommitAssistant.apiProvider": {
           "type": "string",
           "enum": [
+            "gemini",
             "huggingface",
-            "gemini"
+            "ollama"
           ],
           "enumDescriptions": [
             "Use Google's Gemini AI for generating commit messages",
-            "Use Hugging Face models for generating commit messages"
+            "Use Hugging Face models for generating commit messages",
+            "Use local Ollama models for generating commit messages"
           ],
           "default": "gemini",
           "description": "Select which AI provider to use for generating commit messages"
+        },
+        "aiCommitAssistant.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode to show detailed LLM responses and API interactions"
         },
         "aiCommitAssistant.geminiApiKey": {
           "type": "string",
@@ -47,11 +50,26 @@
         "aiCommitAssistant.huggingfaceModel": {
           "type": "string",
           "default": "mistralai/Mistral-7B-Instruct-v0.3",
-          "description": "Model ID for Hugging Face (e.g., 'gpt2', 'facebook/bart-large-cnn')",
+          "description": "Model ID for Hugging Face (e.g., 'mistralai/Mistral-7B-Instruct-v0.3', 'facebook/bart-large-cnn')",
           "examples": [
             "mistralai/Mistral-7B-Instruct-v0.3",
             "facebook/bart-large-cnn",
             "microsoft/DialoGPT-medium"
+          ]
+        },
+        "aiCommitAssistant.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL for Ollama API server"
+        },
+        "aiCommitAssistant.ollamaModel": {
+          "type": "string",
+          "default": "mistral",
+          "description": "Model name for Ollama (e.g., 'mistral', 'llama2', 'codellama')",
+          "examples": [
+            "mistral",
+            "llama2",
+            "codellama"
           ]
         }
       }
@@ -69,6 +87,11 @@
       {
         "command": "ai-commit-assistant.configureSettings",
         "title": "Configure AI Commit Assistant Settings",
+        "category": "AI Commit Assistant"
+      },
+      {
+        "command": "ai-commit-assistant.toggleDebug",
+        "title": "Toggle Debug Mode",
         "category": "AI Commit Assistant"
       }
     ]
@@ -88,24 +111,43 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.1",
-    "@types/node": "^16.x",
-    "@types/vscode": "^1.74.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.16",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
-    "esbuild": "^0.19.10",
+    "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.3.3"
+    "typescript": "~5.3.3"
   },
   "dependencies": {
     "@google/generative-ai": "^0.1.3",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.4.1",
+    "node-fetch": "^3.3.2"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/shahabahreini/AI-Commit-Assistant.git"
-  }
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "gemini",
+    "huggingface",
+    "ollama",
+    "conventional commits",
+    "commit message",
+    "git message",
+    "debug"
+  ],
+  "author": "Shahab Ahreini",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shahabahreini/AI-Commit-Assistant/issues"
+  },
+  "homepage": "https://github.com/shahabahreini/AI-Commit-Assistant#readme"
 }

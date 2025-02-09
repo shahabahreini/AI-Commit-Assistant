@@ -1,213 +1,296 @@
 // src/extension.ts
-import * as vscode from 'vscode';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import * as vscode from "vscode";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-// Status bar item for better visibility
 let statusBarItem: vscode.StatusBarItem;
+let debugChannel: vscode.OutputChannel;
 
-// Interface for API configurations
+// Interfaces
 interface ApiConfig {
-  type: 'gemini' | 'huggingface';
-  apiKey: string;
+  type: "gemini" | "huggingface" | "ollama";
+  apiKey?: string;
   model?: string;
+  ollamaUrl?: string;
 }
 
-// Interface for Hugging Face API response
 interface HuggingFaceResponse {
   generated_text: string;
 }
 
-// Add this interface near the top with other interfaces
+interface OllamaResponse {
+  response: string;
+  done: boolean;
+}
+
 interface CommitMessage {
   summary: string;
   description: string;
 }
 
-// Add this function to process Hugging Face responses
-async function processHuggingFaceResponse(response: string): Promise<CommitMessage> {
-  try {
-    // First, try to find the actual commit message by looking for the last occurrence
-    // of the commit format in the response
-    const blocks = response.split('```');
-    let cleanResponse = response;
+// Debug logging function
+function debugLog(message: string, data?: any) {
+  const config = vscode.workspace.getConfiguration("aiCommitAssistant");
+  const isDebugMode = config.get<boolean>("debug") || false;
 
-    // If we find a code block, take the last one as it's usually the final answer
-    if (blocks.length > 1) {
-      cleanResponse = blocks[blocks.length - 2].trim();
+  if (isDebugMode) {
+    const timestamp = new Date().toISOString();
+    debugChannel.appendLine(`[${timestamp}] ${message}`);
+    if (data) {
+      debugChannel.appendLine(JSON.stringify(data, null, 2));
     }
-
-    // Split the response into sections based on headers
-    const sections = cleanResponse.split('#').map(s => s.trim());
-
-    let summary = '';
-    let description = '';
-
-    // Find the commit summary section
-    const summarySection = sections.find(s =>
-      s.toLowerCase().includes('commit summary') ||
-      s.toLowerCase().includes('summary')
-    );
-    if (summarySection) {
-      const summaryLines = summarySection.split('\n')
-        .filter(line => line.trim())
-        .filter(line => !line.toLowerCase().includes('commit summary'))
-        .filter(line => !line.toLowerCase().includes('summary'));
-
-      if (summaryLines.length > 0) {
-        summary = summaryLines[0].trim();
-      }
-    }
-
-    // Find the detailed description section
-    const descriptionSection = sections.find(s =>
-      s.toLowerCase().includes('detailed description') ||
-      s.toLowerCase().includes('description')
-    );
-    if (descriptionSection) {
-      const descriptionLines = descriptionSection.split('\n')
-        .filter(line => line.trim())
-        .filter(line => !line.toLowerCase().includes('detailed description'))
-        .filter(line => !line.toLowerCase().includes('description'));
-
-      if (descriptionLines.length > 0) {
-        description = descriptionLines.join('\n').trim();
-      }
-    }
-
-    // If no structured sections found, try fallback parsing
-    if (!summary) {
-      const summaryPattern = /(?:feat|fix|docs|style|refactor|test|chore):[^#\n]*/;
-      const summaryMatch = cleanResponse.match(summaryPattern);
-      if (summaryMatch) {
-        summary = summaryMatch[0].trim();
-      }
-    }
-
-    // Clean up and format
-    summary = summary
-      .replace(/\[.*?\]/g, '')  // Remove any [brackets]
-      .replace(/\s+/g, ' ')     // Normalize whitespace
-      .trim();
-
-    description = description
-      .replace(/\[.*?\]/g, '')  // Remove any [brackets]
-      .replace(/^\n+|\n+$/g, '') // Remove leading/trailing newlines
-      .trim();
-
-    // Ensure proper formatting
-    if (!summary.match(/^(feat|fix|docs|style|refactor|test|chore):/)) {
-      summary = `feat: ${summary}`;
-    }
-
-    // Only use fallbacks if we really couldn't find anything
-    if (!summary || summary.length < 5) {
-      summary = 'feat: update code';
-    }
-    if (!description) {
-      // Try to extract any remaining meaningful content
-      const remainingContent = cleanResponse
-        .split('\n')
-        .filter(line =>
-          line.trim() &&
-          !line.includes('#') &&
-          !line.toLowerCase().includes('commit summary') &&
-          !line.toLowerCase().includes('detailed description')
-        )
-        .join('\n')
-        .trim();
-
-      description = remainingContent || 'Update implementation';
-    }
-
-    return {
-      summary: summary.slice(0, 72),
-      description
-    };
-  } catch (error) {
-    console.error('Error processing response:', error);
-    return {
-      summary: 'feat: update code',
-      description: 'Update implementation'
-    };
+    debugChannel.show(true);
   }
 }
 
+async function callOllamaAPI(
+  baseUrl: string,
+  model: string,
+  diff: string
+): Promise<string> {
+  const prompt = `Generate a detailed commit message for the following changes:
 
-
-// Modify the callHuggingFaceAPI function
-async function callHuggingFaceAPI(apiKey: string, model: string, diff: string): Promise<string> {
-  const prompt = `<|system|>You are a git commit message writer. Generate only the commit message without any additional text or instructions.
-
-<|user|>Write a commit message for this diff:
 ${diff}
 
-Based on the following git diff, generate:
-1. A concise commit summary (max 72 characters) following conventional commits format
-2. A detailed technical description of the changes
+Requirements:
+1. First line must:
+   - Start with one of: feat|fix|docs|style|refactor|test|chore
+   - Be under 50 characters
+   - Use imperative mood
+   - Summarize the change
 
-Rules for commit summary:
-- Use conventional commits format (feat:, fix:, docs:, style:, refactor:, test:, chore:)
-- Keep it under 72 characters
-- Use present tense
-- Be specific and clear
+2. Leave one blank line after the first line
 
-Format your response exactly like this, nothing else:
+3. Write a CONCISE description with 2-4 bullet points that explains:
+   - What changes were made
+   - Why the changes were necessary (if relevant)
+   - Impact of the changes
+
+Format your response EXACTLY as:
+<type>: <short description>
+
+- <point 1>
+- <point 2>
+- <point 3 if needed>`;
+
+  debugLog("Calling Ollama API", { baseUrl, model });
+  debugLog("Prompt:", prompt);
+
+  const response = await fetch(`${baseUrl}/api/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: model,
+      prompt: prompt,
+      stream: false,
+      options: {
+        temperature: 0.1,
+        top_p: 0.95,
+        system:
+          "You are a commit message generator that creates clear, concise, and informative commit messages.",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    debugLog("Ollama API Error:", error);
+    throw new Error(`Ollama API error: ${response.statusText}`);
+  }
+
+  const result = (await response.json()) as OllamaResponse;
+
+  // Clean response if using DeepSeek model
+  let cleanedResponse = model.toLowerCase().includes("deepseek")
+    ? cleanDeepSeekResponse(result.response)
+    : result.response;
+
+  debugLog("Ollama Response (after cleaning):", cleanedResponse);
+  return cleanedResponse;
+}
+
+async function callHuggingFaceAPI(
+  apiKey: string,
+  model: string,
+  diff: string
+): Promise<string> {
+  const prompt = `Analyze the following git diff and generate a commit message. The commit message should follow conventional commits format and accurately reflect the type of changes made:
+
+Git Diff:
+${diff}
+
+Guidelines:
+1. Choose the most appropriate type based on the changes:
+   - feat: New features or significant enhancements
+   - fix: Bug fixes
+   - docs: Documentation changes
+   - style: Code style changes (formatting, semicolons, etc)
+   - refactor: Code changes that neither fix bugs nor add features
+   - test: Adding or modifying tests
+   - chore: Changes to build process or auxiliary tools
+
+2. Format:
 # Commit Summary
-feat: brief description
+<type>: brief description (max 72 chars)
 
 # Detailed Description
-Technical details here
+Technical details about the changes`;
 
-<|assistant|>`;
+  debugLog("Calling Hugging Face API", { model });
+  debugLog("Prompt:", prompt);
 
   const response = await fetch(
     `https://api-inference.huggingface.co/models/${model}`,
     {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       method: "POST",
       body: JSON.stringify({
         inputs: prompt,
         parameters: {
           max_length: 500,
-          temperature: 0.1,  // Even lower temperature for more deterministic output
+          temperature: 0.1,
           top_p: 0.95,
           return_full_text: false,
-          do_sample: false  // Use greedy decoding for more consistent output
-        }
+          do_sample: false,
+        },
       }),
     }
   );
 
   if (!response.ok) {
+    const error = await response.text();
+    debugLog("Hugging Face API Error:", error);
     throw new Error(`Hugging Face API error: ${response.statusText}`);
   }
 
-  const result = await response.json() as HuggingFaceResponse | HuggingFaceResponse[];
-  return Array.isArray(result) ? result[0].generated_text : result.generated_text;
+  const result = (await response.json()) as
+    | HuggingFaceResponse
+    | HuggingFaceResponse[];
+  const generatedText = Array.isArray(result)
+    ? result[0].generated_text
+    : result.generated_text;
+  debugLog("Hugging Face Response:", generatedText);
+  return generatedText;
 }
 
+async function processResponse(response: string): Promise<CommitMessage> {
+  debugLog("Processing Response:", response);
+  try {
+    // Split response into lines and remove empty lines
+    const lines = response
+      .trim()
+      .split("\n")
+      .filter((line) => line.trim());
 
-// Function to parse markdown content
-function parseMarkdownContent(content: string): [string, string] {
+    const summaryPattern =
+      /^(feat|fix|docs|style|refactor|test|chore)(\([^)]+\))?:\s+[^\n]+$/i;
+    let summary = "";
+    let description = "";
+    let foundSummary = false;
+    let bulletPoints: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines and XML/HTML tags
+      if (!line || line.match(/^<[^>]+>$/)) {
+        continue;
+      }
+
+      if (!foundSummary && summaryPattern.test(line)) {
+        summary = line;
+        foundSummary = true;
+        continue;
+      }
+
+      if (foundSummary) {
+        // Skip markdown headers and formatting markers
+        if (
+          line.startsWith("#") ||
+          line === "---" ||
+          line.match(/^\*\*.*\*\*$/)
+        ) {
+          continue;
+        }
+
+        // Clean up the line
+        let cleanedLine = line
+          .replace(/^\*\*[^:]+:\*\*\s*/, "") // Remove bold headers
+          .replace(/`([^`]+)`/g, "$1") // Remove code formatting
+          .replace(/\*\*/g, "") // Remove bold markers
+          .trim();
+
+        // Add to bullet points if it's meaningful content
+        if (cleanedLine) {
+          // Ensure line starts with bullet point
+          if (!cleanedLine.startsWith("-")) {
+            cleanedLine = "- " + cleanedLine;
+          }
+          bulletPoints.push(cleanedLine);
+        }
+      }
+    }
+
+    // Clean up and format the description
+    if (bulletPoints.length > 0) {
+      description = bulletPoints.join("\n");
+    } else {
+      description = "- Update implementation with necessary changes";
+    }
+
+    // Clean up the summary
+    summary = summary
+      .replace(/\[.*?\]/g, "") // Remove markdown-style links
+      .replace(/<[^>]+>/g, "") // Remove any remaining XML-like tags
+      .replace(/\s+/g, " ") // Normalize whitespace
+      .trim();
+
+    // Default values if nothing is found
+    if (!summary) {
+      summary = "chore: update code";
+    }
+
+    // Ensure summary doesn't exceed 50 characters
+    if (summary.length > 50) {
+      summary = summary.substring(0, 47) + "...";
+    }
+
+    debugLog("Processed Commit Message:", { summary, description });
+    return {
+      summary,
+      description,
+    };
+  } catch (error) {
+    debugLog("Error Processing Response:", error);
+    return {
+      summary: "chore: update code",
+      description: "- Update implementation",
+    };
+  }
+}
+function parseMarkdownContent(content: string): CommitMessage {
   const summaryMatch = content.match(/# Commit Summary\s*\n([^\n#]*)/);
-  const descriptionMatch = content.match(/# Detailed Description\s*\n([\s\S]*?)(?:\n#|$)/);
+  const descriptionMatch = content.match(
+    /# Detailed Description\s*\n([\s\S]*?)(?:\n#|$)/
+  );
 
-  const summary = summaryMatch ? summaryMatch[1].trim() : '';
-  const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+  const summary = summaryMatch ? summaryMatch[1].trim() : "chore: update code";
+  const description = descriptionMatch
+    ? descriptionMatch[1].trim()
+    : "Update implementation";
 
-  return [summary, description];
+  return { summary, description };
 }
 
-// Function to generate webview content
-function getWebviewContent(content: string): string {
+function getWebviewContent(commitMessage: CommitMessage): string {
   return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -219,200 +302,272 @@ function getWebviewContent(content: string): string {
                 padding: 20px;
                 line-height: 1.6;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                color: var(--vscode-editor-foreground);
+                background-color: var(--vscode-editor-background);
             }
             pre {
-                background-color: #f5f5f5;
+                background-color: var(--vscode-textBlockQuote-background);
                 padding: 15px;
                 border-radius: 5px;
                 overflow-x: auto;
+                margin: 10px 0;
+            }
+            .commit-type {
+                color: var(--vscode-textLink-foreground);
+                font-weight: bold;
+            }
+            .commit-summary {
+                margin-bottom: 20px;
+            }
+            .commit-description {
+                white-space: pre-wrap;
+            }
+            h2 {
+                color: var(--vscode-editor-foreground);
+                border-bottom: 1px solid var(--vscode-textSeparator-foreground);
+                padding-bottom: 5px;
             }
         </style>
     </head>
     <body>
         <div class="markdown-body">
-            ${content}
+            <div class="commit-summary">
+                <h2>Commit Summary</h2>
+                <pre>${commitMessage.summary}</pre>
+            </div>
+            <div class="commit-description">
+                <h2>Detailed Description</h2>
+                <pre>${commitMessage.description}</pre>
+            </div>
         </div>
     </body>
     </html>`;
 }
 
+function cleanDeepSeekResponse(response: string): string {
+  // Remove any content within <think> tags
+  response = response.replace(/<think>[\s\S]*?<\/think>/g, "");
+  // Remove any remaining XML-like tags
+  response = response.replace(/<[^>]*>/g, "");
+  // Clean up extra whitespace
+  response = response.trim().replace(/\s+/g, " ");
+  return response;
+}
+
 export async function activate(context: vscode.ExtensionContext) {
-  // Create status bar item
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  debugChannel = vscode.window.createOutputChannel("AI Commit Assistant Debug");
+  context.subscriptions.push(debugChannel);
+
+  statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left
+  );
   statusBarItem.text = "$(git-commit) AI Commit";
-  statusBarItem.command = 'ai-commit-assistant.generateCommitMessage';
-  statusBarItem.tooltip = 'Generate AI Commit Message';
+  statusBarItem.command = "ai-commit-assistant.generateCommitMessage";
+  statusBarItem.tooltip = "Generate AI Commit Message";
   context.subscriptions.push(statusBarItem);
   statusBarItem.show();
 
-  let disposable = vscode.commands.registerCommand('ai-commit-assistant.generateCommitMessage', async () => {
-    try {
-      // Show loading state
-      statusBarItem.text = "$(sync~spin) Generating commit...";
+  let toggleDebugCommand = vscode.commands.registerCommand(
+    "ai-commit-assistant.toggleDebug",
+    async () => {
+      const config = vscode.workspace.getConfiguration("aiCommitAssistant");
+      const currentDebug = config.get<boolean>("debug") || false;
+      await config.update("debug", !currentDebug, true);
+      vscode.window.showInformationMessage(
+        `Debug mode ${!currentDebug ? "enabled" : "disabled"}`
+      );
+    }
+  );
 
-      // Get the current workspace folder
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        throw new Error('No workspace folder found');
-      }
+  context.subscriptions.push(toggleDebugCommand);
 
-      // Validate git repository
+  let disposable = vscode.commands.registerCommand(
+    "ai-commit-assistant.generateCommitMessage",
+    async () => {
       try {
-        await execAsync('git rev-parse --is-inside-work-tree', {
-          cwd: workspaceFolder.uri.fsPath
+        debugLog("Command Started: generateCommitMessage");
+        statusBarItem.text = "$(sync~spin) Generating commit...";
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+          throw new Error("No workspace folder found");
+        }
+
+        try {
+          await execAsync("git rev-parse --is-inside-work-tree", {
+            cwd: workspaceFolder.uri.fsPath,
+          });
+        } catch (error) {
+          throw new Error("Not a git repository");
+        }
+
+        const { stdout: diff } = await execAsync("git diff --staged", {
+          cwd: workspaceFolder.uri.fsPath,
         });
-      } catch (error) {
-        throw new Error('Not a git repository');
-      }
 
-      // Get git diff
-      const { stdout: diff } = await execAsync('git diff --staged', {
-        cwd: workspaceFolder.uri.fsPath
-      });
+        if (!diff) {
+          const { stdout: unstagesDiff } = await execAsync("git diff", {
+            cwd: workspaceFolder.uri.fsPath,
+          });
 
-      if (!diff) {
-        const { stdout: unstagesDiff } = await execAsync('git diff', {
-          cwd: workspaceFolder.uri.fsPath
-        });
-
-        if (!unstagesDiff) {
-          throw new Error('No changes detected');
-        } else {
-          const answer = await vscode.window.showWarningMessage(
-            'No staged changes found. Would you like to generate a commit message for unstaged changes?',
-            'Yes', 'No'
-          );
-          if (answer !== 'Yes') {
-            return;
+          if (!unstagesDiff) {
+            throw new Error("No changes detected");
+          } else {
+            const answer = await vscode.window.showWarningMessage(
+              "No staged changes found. Would you like to generate a commit message for unstaged changes?",
+              "Yes",
+              "No"
+            );
+            if (answer !== "Yes") {
+              return;
+            }
           }
         }
-      }
 
-      // Get configuration
-      const config = vscode.workspace.getConfiguration('aiCommitAssistant');
-      const apiProvider = config.get<string>('apiProvider') || 'gemini';
-      const geminiApiKey = config.get<string>('geminiApiKey') || process.env.GEMINI_API_KEY;
-      const huggingfaceApiKey = config.get<string>('huggingfaceApiKey') || process.env.HUGGINGFACE_API_KEY;
-      const huggingfaceModel = config.get<string>('huggingfaceModel') || 'mistralai/Mistral-7B-Instruct-v0.3';
+        const config = vscode.workspace.getConfiguration("aiCommitAssistant");
+        const apiProvider = config.get<string>("apiProvider") || "gemini";
+        const geminiApiKey =
+          config.get<string>("geminiApiKey") || process.env.GEMINI_API_KEY;
+        const huggingfaceApiKey =
+          config.get<string>("huggingfaceApiKey") ||
+          process.env.HUGGINGFACE_API_KEY;
+        const huggingfaceModel =
+          config.get<string>("huggingfaceModel") ||
+          "mistralai/Mistral-7B-Instruct-v0.3";
+        const ollamaUrl =
+          config.get<string>("ollamaUrl") || "http://localhost:11434";
+        const ollamaModel = config.get<string>("ollamaModel") || "mistral";
 
-      let apiConfig: ApiConfig;
+        let apiConfig: ApiConfig;
+        let commitMessage: CommitMessage;
 
-      if (apiProvider === 'gemini' && geminiApiKey) {
-        apiConfig = { type: 'gemini', apiKey: geminiApiKey };
-      } else if (apiProvider === 'huggingface' && huggingfaceApiKey) {
-        apiConfig = {
-          type: 'huggingface',
-          apiKey: huggingfaceApiKey,
-          model: huggingfaceModel
-        };
-      } else {
-        const setKeyAction = 'Configure API';
-        const result = await vscode.window.showErrorMessage(
-          `API key not found for ${apiProvider}. Please configure your API settings.`,
-          setKeyAction
+        if (apiProvider === "gemini" && geminiApiKey) {
+          debugLog("Using Gemini API");
+          apiConfig = { type: "gemini", apiKey: geminiApiKey };
+          const genAI = new GoogleGenerativeAI(apiConfig.apiKey!);
+          const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+          const promptText = `Analyze the following git diff and generate a commit message. The commit message should follow conventional commits format and accurately reflect the type of changes made:
+
+Git Diff:
+${diff}
+
+Guidelines:
+1. Choose the most appropriate type based on the changes:
+   - feat: New features or significant enhancements
+   - fix: Bug fixes
+   - docs: Documentation changes
+   - style: Code style changes (formatting, semicolons, etc)
+   - refactor: Code changes that neither fix bugs nor add features
+   - test: Adding or modifying tests
+   - chore: Changes to build process or auxiliary tools
+
+2. Format:
+# Commit Summary
+<type>: brief description (max 72 chars)
+
+# Detailed Description
+Technical details about the changes`;
+
+          debugLog("Prompt:", promptText);
+
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: promptText }] }],
+          });
+
+          const response = await result.response;
+          debugLog("Gemini Response:", response.text());
+          commitMessage = parseMarkdownContent(response.text());
+        } else if (apiProvider === "huggingface" && huggingfaceApiKey) {
+          apiConfig = {
+            type: "huggingface",
+            apiKey: huggingfaceApiKey,
+            model: huggingfaceModel,
+          };
+          const rawResponse = await callHuggingFaceAPI(
+            apiConfig.apiKey!,
+            apiConfig.model!,
+            diff
+          );
+          commitMessage = await processResponse(rawResponse);
+        } else if (apiProvider === "ollama") {
+          apiConfig = {
+            type: "ollama",
+            ollamaUrl: ollamaUrl,
+            model: ollamaModel,
+          };
+          const rawResponse = await callOllamaAPI(
+            apiConfig.ollamaUrl!,
+            apiConfig.model!,
+            diff
+          );
+          commitMessage = await processResponse(rawResponse);
+        } else {
+          const setKeyAction = "Configure API";
+          const result = await vscode.window.showErrorMessage(
+            `API configuration not found for ${apiProvider}. Please configure your API settings.`,
+            setKeyAction
+          );
+          if (result === setKeyAction) {
+            await vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "aiCommitAssistant"
+            );
+          }
+          return;
+        }
+
+        const panel = vscode.window.createWebviewPanel(
+          "commitMessage",
+          "AI Generated Commit Message",
+          vscode.ViewColumn.One,
+          {
+            enableScripts: true,
+          }
         );
-        if (result === setKeyAction) {
-          await vscode.commands.executeCommand('workbench.action.openSettings', 'aiCommitAssistant');
+
+        panel.webview.html = getWebviewContent(commitMessage);
+
+        const gitExtension = vscode.extensions.getExtension("vscode.git");
+        if (!gitExtension) {
+          throw new Error("Git extension not found");
         }
-        return;
+
+        try {
+          const git = gitExtension.exports.getAPI(1);
+          if (!git) {
+            throw new Error("Git API not available");
+          }
+
+          const repositories = git.repositories;
+          if (!repositories || repositories.length === 0) {
+            throw new Error("No Git repositories found");
+          }
+
+          const repository = repositories[0];
+          if (repository) {
+            repository.inputBox.value = `${commitMessage.summary}\n\n${commitMessage.description}`;
+          }
+        } catch (err: unknown) {
+          console.error("Error accessing Git repository:", err);
+          const errorMessage =
+            err instanceof Error ? err.message : "An unknown error occurred";
+          debugLog("Git Repository Error:", err);
+          vscode.window.showErrorMessage(
+            `Failed to set commit message in Source Control: ${errorMessage}`
+          );
+        }
+
+        statusBarItem.text = "$(git-commit) AI Commit";
+      } catch (error: unknown) {
+        statusBarItem.text = "$(git-commit) AI Commit";
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        debugLog("Command Error:", error);
+        vscode.window.showErrorMessage(`Error: ${errorMessage}`);
       }
-
-      const prompt = `
-                Based on the following git diff, generate:
-                1. A concise commit summary (max 72 characters) following conventional commits format
-                2. A detailed technical description of the changes
-
-                Git Diff:
-                ${diff}
-
-                Format the output in markdown with:
-                # Commit Summary
-                [summary here]
-
-                # Detailed Description
-                [description here]
-
-                Rules for commit summary:
-                - Use conventional commits format (feat:, fix:, docs:, style:, refactor:, test:, chore:)
-                - Keep it under 72 characters
-                - Use present tense
-                - Be specific and clear
-            `;
-
-      let text: string;
-
-      let summary: string;
-      let description: string;
-
-      if (apiConfig.type === 'gemini') {
-        const genAI = new GoogleGenerativeAI(apiConfig.apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-        [summary, description] = parseMarkdownContent(text);
-      } else {
-        // Hugging Face API call
-        const rawResponse = await callHuggingFaceAPI(apiConfig.apiKey, apiConfig.model!, prompt);
-        const processedResponse = await processHuggingFaceResponse(rawResponse);
-        summary = processedResponse.summary;
-        description = processedResponse.description;
-        text = `# Commit Summary\n${summary}\n\n# Detailed Description\n${description}`;
-      }
-
-      // Create and show webview
-      const panel = vscode.window.createWebviewPanel(
-        'commitMessage',
-        'AI Generated Commit Message',
-        vscode.ViewColumn.One,
-        {
-          enableScripts: true
-        }
-      );
-
-      panel.webview.html = getWebviewContent(text);
-
-      // Populate Source Control input
-      const gitExtension = vscode.extensions.getExtension('vscode.git');
-      if (!gitExtension) {
-        throw new Error('Git extension not found');
-      }
-
-      try {
-        const git = gitExtension.exports.getAPI(1);
-        if (!git) {
-          throw new Error('Git API not available');
-        }
-
-        const repositories = git.repositories;
-        if (!repositories || repositories.length === 0) {
-          throw new Error('No Git repositories found');
-        }
-
-        const repository = repositories[0];
-        if (repository) {
-          // Set the commit message in the Source Control input box
-          repository.inputBox.value = `${summary}\n\n${description}`;
-        }
-      } catch (err: unknown) {
-        console.error('Error accessing Git repository:', err);
-        const errorMessage = err instanceof Error
-          ? err.message
-          : 'An unknown error occurred';
-        vscode.window.showErrorMessage(`Failed to set commit message in Source Control: ${errorMessage}`);
-      }
-
-      // Reset status bar
-      statusBarItem.text = "$(git-commit) AI Commit";
-    } catch (error: unknown) {
-      // Reset status bar on error
-      statusBarItem.text = "$(git-commit) AI Commit";
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Unknown error';
-      vscode.window.showErrorMessage(`Error: ${errorMessage}`);
     }
-  });
+  );
 
   context.subscriptions.push(disposable);
 }

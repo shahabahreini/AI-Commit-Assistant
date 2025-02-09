@@ -38,6 +38,7 @@ npm install
 nvm install --lts
 nvm use --lts
 npm run package
+vsce package
 ```
 
 ## Configuration
