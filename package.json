@@ -20,93 +20,69 @@
     "configuration": {
       "title": "AI Commit Assistant",
       "properties": {
-        "aiCommitAssistant.general": {
-          "type": "object",
-          "title": "General Settings",
-          "properties": {
-            "apiProvider": {
-              "type": "string",
-              "enum": [
-                "gemini",
-                "huggingface",
-                "ollama"
-              ],
-              "enumDescriptions": [
-                "Use Google's Gemini AI for generating commit messages",
-                "Use Hugging Face models for generating commit messages",
-                "Use local Ollama models for generating commit messages"
-              ],
-              "default": "huggingface",
-              "description": "Select which AI provider to use for generating commit messages",
-              "order": 1
-            },
-            "debug": {
-              "type": "boolean",
-              "default": false,
-              "description": "Enable debug mode to show detailed LLM responses and API interactions",
-              "order": 2
-            }
-          }
+        "aiCommitAssistant.apiProvider": {
+          "type": "string",
+          "enum": [
+            "gemini",
+            "huggingface",
+            "ollama"
+          ],
+          "enumDescriptions": [
+            "Use Google's Gemini AI for generating commit messages",
+            "Use Hugging Face models for generating commit messages",
+            "Use local Ollama models for generating commit messages"
+          ],
+          "default": "huggingface",
+          "description": "Select which AI provider to use for generating commit messages",
+          "order": 1
         },
-        "aiCommitAssistant.gemini": {
-          "type": "object",
-          "title": "Gemini Settings",
-          "properties": {
-            "apiKey": {
-              "type": "string",
-              "description": "API key for Google's Gemini AI",
-              "order": 1
-            }
-          }
+        "aiCommitAssistant.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode to show detailed LLM responses and API interactions",
+          "order": 2
         },
-        "aiCommitAssistant.huggingface": {
-          "type": "object",
-          "title": "Hugging Face Settings",
-          "properties": {
-            "apiKey": {
-              "type": "string",
-              "description": "API key for Hugging Face",
-              "order": 1
-            },
-            "model": {
-              "type": "string",
-              "default": "mistralai/Mistral-7B-Instruct-v0.3",
-              "description": "Model ID for Hugging Face",
-              "markdownDescription": "Model ID for Hugging Face. [Learn more](https://huggingface.co/models)",
-              "examples": [
-                "mistralai/Mistral-7B-Instruct-v0.3",
-                "facebook/bart-large-cnn",
-                "microsoft/DialoGPT-medium"
-              ],
-              "order": 2
-            }
-          }
+        "aiCommitAssistant.gemini.apiKey": {
+          "type": "string",
+          "description": "API key for Google's Gemini AI",
+          "order": 3
         },
-        "aiCommitAssistant.ollama": {
-          "type": "object",
-          "title": "Ollama Settings",
-          "properties": {
-            "url": {
-              "type": "string",
-              "default": "http://localhost:11434",
-              "description": "URL for Ollama API server",
-              "order": 1
-            },
-            "model": {
-              "type": "string",
-              "default": "phi4",
-              "description": "Model name for Ollama",
-              "markdownDescription": "Model name for Ollama. [Available models](https://ollama.ai/library)",
-              "examples": [
-                "mistral",
-                "llama2",
-                "codellama",
-                "phi4",
-                "qwen2.5-coder"
-              ],
-              "order": 2
-            }
-          }
+        "aiCommitAssistant.huggingface.apiKey": {
+          "type": "string",
+          "description": "API key for Hugging Face",
+          "order": 4
+        },
+        "aiCommitAssistant.huggingface.model": {
+          "type": "string",
+          "default": "mistralai/Mistral-7B-Instruct-v0.3",
+          "description": "Model ID for Hugging Face",
+          "markdownDescription": "Model ID for Hugging Face. [Learn more](https://huggingface.co/models)",
+          "examples": [
+            "mistralai/Mistral-7B-Instruct-v0.3",
+            "facebook/bart-large-cnn",
+            "microsoft/DialoGPT-medium"
+          ],
+          "order": 5
+        },
+        "aiCommitAssistant.ollama.url": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL for Ollama API server",
+          "order": 6
+        },
+        "aiCommitAssistant.ollama.model": {
+          "type": "string",
+          "default": "phi4",
+          "description": "Model name for Ollama",
+          "markdownDescription": "Model name for Ollama. [Available models](https://ollama.ai/library)",
+          "examples": [
+            "mistral",
+            "llama2",
+            "codellama",
+            "phi4",
+            "qwen2.5-coder"
+          ],
+          "order": 7
         }
       }
     },

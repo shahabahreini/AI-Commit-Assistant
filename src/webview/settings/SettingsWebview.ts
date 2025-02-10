@@ -67,13 +67,19 @@ export class SettingsWebview {
 
     private async _saveSettings(settings: any) {
         const config = vscode.workspace.getConfiguration('aiCommitAssistant');
-        await config.update('general', settings.general, vscode.ConfigurationTarget.Global);
-        await config.update('gemini', settings.gemini, vscode.ConfigurationTarget.Global);
-        await config.update('huggingface', settings.huggingface, vscode.ConfigurationTarget.Global);
-        await config.update('ollama', settings.ollama, vscode.ConfigurationTarget.Global);
+
+        // Update settings one by one
+        await config.update('apiProvider', settings.apiProvider, vscode.ConfigurationTarget.Global);
+        await config.update('debug', settings.debug, vscode.ConfigurationTarget.Global);
+        await config.update('gemini.apiKey', settings.gemini.apiKey, vscode.ConfigurationTarget.Global);
+        await config.update('huggingface.apiKey', settings.huggingface.apiKey, vscode.ConfigurationTarget.Global);
+        await config.update('huggingface.model', settings.huggingface.model, vscode.ConfigurationTarget.Global);
+        await config.update('ollama.url', settings.ollama.url, vscode.ConfigurationTarget.Global);
+        await config.update('ollama.model', settings.ollama.model, vscode.ConfigurationTarget.Global);
 
         vscode.window.showInformationMessage('Settings saved successfully!');
     }
+
 
     private _update() {
         const webview = this._panel.webview;

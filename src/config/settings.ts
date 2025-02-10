@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { ApiConfig, ExtensionConfig, CommitConfig, ProviderConfig } from './types';
 
 export function getConfiguration(): ExtensionConfig {
-    const config = vscode.workspace.getConfiguration('aiCommitAssistant');
+    const config = vscode.workspace.getConfiguration("aiCommitAssistant");
 
     return {
         provider: config.get('provider', 'huggingface'),
