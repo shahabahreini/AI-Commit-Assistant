@@ -117,6 +117,15 @@
           "light": "resources/light/settings.svg",
           "dark": "resources/dark/settings.svg"
         }
+      },
+      {
+        "command": "ai-commit-assistant.openSettings",
+        "title": "Open Settings",
+        "category": "AI Commit Assistant",
+        "icon": {
+          "light": "resources/light/settings.svg",
+          "dark": "resources/dark/settings.svg"
+        }
       }
     ],
     "menus": {
@@ -130,6 +139,11 @@
           "command": "ai-commit-assistant.loadingIndicator",
           "group": "navigation",
           "when": "scmProvider == git && ai-commit-assistant.isGenerating"
+        },
+        {
+          "command": "ai-commit-assistant.openSettings",
+          "group": "navigation",
+          "when": "scmProvider == git"
         }
       ],
       "commandPalette": [
