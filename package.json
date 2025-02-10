@@ -20,58 +20,93 @@
     "configuration": {
       "title": "AI Commit Assistant",
       "properties": {
-        "aiCommitAssistant.apiProvider": {
-          "type": "string",
-          "enum": [
-            "gemini",
-            "huggingface",
-            "ollama"
-          ],
-          "enumDescriptions": [
-            "Use Google's Gemini AI for generating commit messages",
-            "Use Hugging Face models for generating commit messages",
-            "Use local Ollama models for generating commit messages"
-          ],
-          "default": "huggingface",
-          "description": "Select which AI provider to use for generating commit messages"
+        "aiCommitAssistant.general": {
+          "type": "object",
+          "title": "General Settings",
+          "properties": {
+            "apiProvider": {
+              "type": "string",
+              "enum": [
+                "gemini",
+                "huggingface",
+                "ollama"
+              ],
+              "enumDescriptions": [
+                "Use Google's Gemini AI for generating commit messages",
+                "Use Hugging Face models for generating commit messages",
+                "Use local Ollama models for generating commit messages"
+              ],
+              "default": "huggingface",
+              "description": "Select which AI provider to use for generating commit messages",
+              "order": 1
+            },
+            "debug": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable debug mode to show detailed LLM responses and API interactions",
+              "order": 2
+            }
+          }
         },
-        "aiCommitAssistant.debug": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable debug mode to show detailed LLM responses and API interactions"
+        "aiCommitAssistant.gemini": {
+          "type": "object",
+          "title": "Gemini Settings",
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "description": "API key for Google's Gemini AI",
+              "order": 1
+            }
+          }
         },
-        "aiCommitAssistant.geminiApiKey": {
-          "type": "string",
-          "description": "API key for Google's Gemini AI"
+        "aiCommitAssistant.huggingface": {
+          "type": "object",
+          "title": "Hugging Face Settings",
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "description": "API key for Hugging Face",
+              "order": 1
+            },
+            "model": {
+              "type": "string",
+              "default": "mistralai/Mistral-7B-Instruct-v0.3",
+              "description": "Model ID for Hugging Face",
+              "markdownDescription": "Model ID for Hugging Face. [Learn more](https://huggingface.co/models)",
+              "examples": [
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "facebook/bart-large-cnn",
+                "microsoft/DialoGPT-medium"
+              ],
+              "order": 2
+            }
+          }
         },
-        "aiCommitAssistant.huggingfaceApiKey": {
-          "type": "string",
-          "description": "API key for Hugging Face"
-        },
-        "aiCommitAssistant.huggingfaceModel": {
-          "type": "string",
-          "default": "mistralai/Mistral-7B-Instruct-v0.3",
-          "description": "Model ID for Hugging Face (e.g., 'mistralai/Mistral-7B-Instruct-v0.3', 'facebook/bart-large-cnn')",
-          "examples": [
-            "mistralai/Mistral-7B-Instruct-v0.3",
-            "facebook/bart-large-cnn",
-            "microsoft/DialoGPT-medium"
-          ]
-        },
-        "aiCommitAssistant.ollamaUrl": {
-          "type": "string",
-          "default": "http://localhost:11434",
-          "description": "URL for Ollama API server"
-        },
-        "aiCommitAssistant.ollamaModel": {
-          "type": "string",
-          "default": "phi4",
-          "description": "Model name for Ollama (e.g., 'mistral:latest', 'phi4', 'qwen2.5-coder:latest')",
-          "examples": [
-            "mistral",
-            "llama2",
-            "codellama"
-          ]
+        "aiCommitAssistant.ollama": {
+          "type": "object",
+          "title": "Ollama Settings",
+          "properties": {
+            "url": {
+              "type": "string",
+              "default": "http://localhost:11434",
+              "description": "URL for Ollama API server",
+              "order": 1
+            },
+            "model": {
+              "type": "string",
+              "default": "phi4",
+              "description": "Model name for Ollama",
+              "markdownDescription": "Model name for Ollama. [Available models](https://ollama.ai/library)",
+              "examples": [
+                "mistral",
+                "llama2",
+                "codellama",
+                "phi4",
+                "qwen2.5-coder"
+              ],
+              "order": 2
+            }
+          }
         }
       }
     },
@@ -86,11 +121,6 @@
         }
       },
       {
-        "command": "ai-commit-assistant.configureSettings",
-        "title": "Configure AI Commit Assistant Settings",
-        "category": "AI Commit Assistant"
-      },
-      {
         "command": "ai-commit-assistant.toggleDebug",
         "title": "Toggle Debug Mode",
         "category": "AI Commit Assistant"
@@ -101,6 +131,15 @@
         "icon": {
           "light": "resources/light/loading.svg",
           "dark": "resources/dark/loading.svg"
+        }
+      },
+      {
+        "command": "ai-commit-assistant.openSettings",
+        "title": "Open Settings UI",
+        "category": "AI Commit Assistant",
+        "icon": {
+          "light": "resources/light/settings.svg",
+          "dark": "resources/dark/settings.svg"
         }
       }
     ],
@@ -127,6 +166,15 @@
         },
         {
           "command": "ai-commit-assistant.toggleDebug"
+        },
+        {
+          "command": "ai-commit-assistant.openSettings"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "ai-commit-assistant.openSettings",
+          "group": "navigation"
         }
       ]
     }
