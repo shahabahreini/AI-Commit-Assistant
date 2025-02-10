@@ -5,7 +5,7 @@ export function getConfiguration(): ExtensionConfig {
     const config = vscode.workspace.getConfiguration("aiCommitAssistant");
 
     return {
-        provider: config.get('provider', 'huggingface'),
+        provider: config.get('apiProvider', 'huggingface'),
         debug: config.get('debug', false),
         gemini: {
             enabled: config.get('gemini.enabled', false),
@@ -36,11 +36,6 @@ export function getConfiguration(): ExtensionConfig {
 export function getApiConfig(): ApiConfig {
     const config = getConfiguration();
     const selectedProvider = config.provider;
-
-    // Validate if the selected provider is enabled
-    if (!config[selectedProvider]?.enabled) {
-        throw new Error(`Selected provider ${selectedProvider} is not enabled. Please enable it in settings.`);
-    }
 
     switch (selectedProvider) {
         case "gemini":
