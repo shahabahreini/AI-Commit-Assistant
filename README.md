@@ -15,7 +15,7 @@ Generate meaningful and consistent git commit messages using AI. This extension 
 - **Conventional Commits Format**:
   - Standardized commit message structure
   - Type categorization (feat, fix, docs, style, refactor, test, chore)
-  - Concise summary (50 characters) with detailed bullet-point description
+  - Concise summary (72 characters) with detailed bullet-point description
 - **Debug Mode**:
   - Toggleable debug logging
   - Detailed API interaction tracking
@@ -23,7 +23,7 @@ Generate meaningful and consistent git commit messages using AI. This extension 
 
 ## Requirements
 
-- Visual Studio Code ^1.74.0
+- Visual Studio Code ^1.75.0
 - Git installed and initialized in workspace
 - One of the following API configurations:
   - Google Gemini API key
