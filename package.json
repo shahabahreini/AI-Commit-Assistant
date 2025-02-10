@@ -44,12 +44,12 @@
         },
         "aiCommitAssistant.gemini.apiKey": {
           "type": "string",
-          "description": "API key for Google's Gemini AI",
+          "markdownDescription": "API key for Google's Gemini AI [Learn more](https://aistudio.google.com/app/apikey)",
           "order": 3
         },
         "aiCommitAssistant.huggingface.apiKey": {
           "type": "string",
-          "description": "API key for Hugging Face",
+          "markdownDescription": "API key for Hugging Face [Learn more](https://huggingface.co/settings/tokens)",
           "order": 4
         },
         "aiCommitAssistant.huggingface.model": {
