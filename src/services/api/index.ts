@@ -55,13 +55,16 @@ export async function generateCommitMessage(config: ApiConfig, diff: string): Pr
         // Format the error message for display
         let errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
 
+        // Only show modal for Ollama connection issues
         if (config.type === "ollama" && errorMessage.includes("Ollama is not running")) {
-            // Error already shown in modal above
-            throw error;
-        } else {
-            // Show regular error for other cases
-            await vscode.window.showErrorMessage(`Error with ${config.type} provider: ${errorMessage}`);
-            throw new Error(`Error with ${config.type} provider: ${errorMessage}`);
+            const instructions = getOllamaInstallInstructions();
+            await vscode.window.showErrorMessage("Ollama Connection Error", {
+                modal: true,
+                detail: instructions
+            });
         }
+
+        // Don't show another error message, just throw the error
+        throw error;
     }
 }

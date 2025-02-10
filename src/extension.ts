@@ -93,6 +93,8 @@ export async function activate(context: vscode.ExtensionContext) {
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         debugLog("Command Error:", error);
+
+        // Show error message only here, not in the API layer
         vscode.window.showErrorMessage(`Error: ${errorMessage}`);
       } finally {
         await vscode.commands.executeCommand(
