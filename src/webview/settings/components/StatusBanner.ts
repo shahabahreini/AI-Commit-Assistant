@@ -120,11 +120,16 @@ export class StatusBanner {
   public render(): string {
     const providerInfo = this.getProviderInfo();
     const provider = this._settings.apiProvider;
+    const isProUser = !!this._settings.pro?.licenseKey && this._settings.pro.licenseKey.length > 0;
 
     const statusItems = [
       this.renderStatusItem(
         'Active Provider',
         `<span class="status-badge ${provider}">${providerInfo.displayName}</span>`
+      ),
+      this.renderStatusItem(
+        'User Type',
+        `<span class="user-type-badge ${isProUser ? 'pro-user' : 'free-user'}">${isProUser ? 'Pro' : 'Free'}</span>`
       ),
       this.renderStatusItem('Model', providerInfo.model),
       this.renderStatusItem('API Status', providerInfo.apiConfigured ? 'Configured' : 'Not Configured'),
@@ -145,11 +150,50 @@ export class StatusBanner {
             <h3>Current Configuration</h3>
             <span class="status-provider-name">${providerInfo.displayName}</span>
           </div>
+          ${isProUser ? '<div class="pro-badge-container"><span class="pro-badge-banner">PRO</span></div>' : ''}
         </div>
         <div class="status-grid">
           ${statusItems.join('')}
         </div>
       </div>
+      
+      <style>
+        .user-type-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+        
+        .user-type-badge.free-user {
+          background-color: #666;
+          color: #f0f0f0;
+        }
+        
+        .user-type-badge.pro-user {
+          background: linear-gradient(135deg, #ffd700, #ffb700);
+          color: #333;
+        }
+        
+        .pro-badge-banner {
+          background: linear-gradient(135deg, #ffd700, #ffb700);
+          color: #333;
+          padding: 2px 10px;
+          border-radius: 4px;
+          font-weight: bold;
+          font-size: 0.8rem;
+        }
+        
+        .pro-badge-container {
+          margin-left: auto;
+        }
+        
+        .status-banner-header {
+          display: flex;
+          align-items: center;
+        }
+      </style>
     `;
   }
 }
