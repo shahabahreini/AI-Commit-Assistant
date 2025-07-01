@@ -18,6 +18,7 @@ import { CopilotSettings } from "./components/CopilotSettings";
 import { DeepSeekSettings } from "./components/DeepSeekSettings";
 import { GrokSettings } from "./components/GrokSettings";
 import { PerplexitySettings } from "./components/PerplexitySettings";
+import { ProFeaturesSettings } from "./components/ProFeaturesSettings";
 
 export class SettingsTemplateGenerator {
   private _settings: ExtensionSettings;
@@ -45,6 +46,7 @@ export class SettingsTemplateGenerator {
     const deepseekSettings = new DeepSeekSettings(this._settings);
     const grokSettings = new GrokSettings(this._settings);
     const perplexitySettings = new PerplexitySettings(this._settings);
+    const proFeaturesSettings = new ProFeaturesSettings(this._settings);
 
     return `
     <!DOCTYPE html>
@@ -61,6 +63,7 @@ export class SettingsTemplateGenerator {
           ${statusBanner.render()}
         </div>
         <h2>AI Commit Assistant Settings</h2>
+        ${proFeaturesSettings.render()}
         ${generalSettings.render()}
         ${geminiSettings.render()}
         ${huggingFaceSettings.render()}

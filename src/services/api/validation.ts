@@ -181,7 +181,7 @@ const VALIDATOR_CONFIGS: Record<string, ValidatorConfig> = {
 };
 
 export async function checkApiSetup(): Promise<ApiCheckResult> {
-    const config: ApiConfig = getApiConfig();
+    const config: ApiConfig = await getApiConfig();
     const validatorConfig = VALIDATOR_CONFIGS[config.type];
 
     const result: ApiCheckResult = {
@@ -251,7 +251,7 @@ export async function checkApiSetup(): Promise<ApiCheckResult> {
 }
 
 export async function checkRateLimits(): Promise<RateLimitsCheckResult> {
-    const config: ApiConfig = getApiConfig();
+    const config: ApiConfig = await getApiConfig();
     const validatorConfig = VALIDATOR_CONFIGS[config.type];
 
     const result: RateLimitsCheckResult = { success: false };

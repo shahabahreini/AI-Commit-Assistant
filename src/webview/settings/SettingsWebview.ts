@@ -92,7 +92,7 @@ export class SettingsWebview {
 
   private async _update() {
     const webview = this._panel.webview;
-    const settings = this._settingsManager.getSettings();
+    const settings = await this._settingsManager.getSettings();
     const templateGenerator = new SettingsTemplateGenerator(settings, getNonce());
     this._panel.webview.html = templateGenerator.generateHtml();
   }

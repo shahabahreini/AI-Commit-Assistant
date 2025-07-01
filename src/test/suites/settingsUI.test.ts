@@ -93,7 +93,7 @@ suite('Settings UI Tests', () => {
 
         try {
             const settingsManager = new SettingsManager();
-            const settings = settingsManager.getSettings();
+            const settings = await settingsManager.getSettings();
 
             assert.strictEqual(settings.apiProvider, 'openai');
             assert.strictEqual(settings.debug, false);
@@ -267,7 +267,7 @@ suite('Settings UI Tests', () => {
 
             // Second session - load settings
             const settingsManager2 = new SettingsManager();
-            const loadedSettings = settingsManager2.getSettings();
+            const loadedSettings = await settingsManager2.getSettings();
 
             assert.strictEqual(loadedSettings.apiProvider, 'anthropic');
             assert.strictEqual(loadedSettings.debug, true);
@@ -302,7 +302,7 @@ suite('Settings UI Tests', () => {
 
         try {
             const settingsManager = new SettingsManager();
-            const settings = settingsManager.getSettings();
+            const settings = await settingsManager.getSettings();
 
             // Should load OpenAI as current provider
             assert.strictEqual(settings.apiProvider, 'openai');
@@ -328,7 +328,7 @@ suite('Settings UI Tests', () => {
 
         try {
             const settingsManager = new SettingsManager();
-            const settings = settingsManager.getSettings();
+            const settings = await settingsManager.getSettings();
 
             // Should use default values when no configuration exists
             assert.strictEqual(settings.apiProvider, 'huggingface'); // Default provider

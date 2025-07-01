@@ -9,6 +9,7 @@ import {
     GrokModel,
     PerplexityModel,
 } from "./types";
+import { SecureKeyManager } from "../services/encryption/SecureKeyManager";
 
 interface ProviderDefaults {
     model: string;
@@ -90,7 +91,7 @@ export function getConfiguration(): ExtensionConfig {
     return result;
 }
 
-export function getApiConfig(): ApiConfig {
+export async function getApiConfig(): Promise<ApiConfig> {
     const config = getConfiguration();
     const provider = config.provider;
     const providerConfig = (config as any)[provider];
@@ -105,6 +106,43 @@ export function getApiConfig(): ApiConfig {
     };
 
     // Add API key for providers that need it
+    if (provider !== 'ollama' && provider !== 'copilot') {
+        // Use SecureKeyManager to get the appropriate API key based on encryption settings
+        const secureKeyManager = SecureKeyManager.getInstance();
+        // Always get the actual API key for API calls, not the display placeholder
+        const secureApiKey = await secureKeyManager.getApiKey(provider, false);
+        baseConfig.apiKey = secureApiKey || "";
+    }
+
+    // Add provider-specific properties
+    switch (provider) {
+        case 'ollama':
+            baseConfig.url = providerConfig.url || "";
+            break;
+        case 'huggingface':
+            baseConfig.temperature = providerConfig.temperature;
+            break;
+    }
+
+    return baseConfig as ApiConfig;
+}
+
+// Legacy synchronous version - falls back to plain text settings only
+export function getApiConfigSync(): ApiConfig {
+    const config = getConfiguration();
+    const provider = config.provider;
+    const providerConfig = (config as any)[provider];
+
+    if (!providerConfig) {
+        throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    const baseConfig: any = {
+        type: provider,
+        model: getEffectiveModel(provider, providerConfig)
+    };
+
+    // Add API key for providers that need it (only from plain text settings)
     if (provider !== 'ollama' && provider !== 'copilot') {
         baseConfig.apiKey = providerConfig.apiKey || "";
     }

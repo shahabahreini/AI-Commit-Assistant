@@ -2,7 +2,7 @@
   "name": "ai-commit-assistant",
   "displayName": "GitMind: Professional AI Commit Assistant",
   "description": "🚀 Professional AI-powered commit message generation for Visual Studio Code. Leverage 13 different AI providers including OpenAI GPT-4o, Claude-3-5-sonnet, Gemini-2.5-flash, DeepSeek-reasoner, Grok-3, Perplexity-sonar, and 50+ models to create consistent, conventional commit messages that improve code history quality and team collaboration.",
-  "version": "3.5.7",
+  "version": "4.0.0",
   "publisher": "ShahabBahreiniJangjoo",
   "private": false,
   "icon": "images/logo.png",
@@ -463,6 +463,20 @@
           ],
           "default": "sonar-pro",
           "description": "Perplexity model to use for generating commit messages"
+        },
+        "aiCommitAssistant.pro.licenseKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your GitMind Pro license key for accessing premium features",
+          "markdownDescription": "Your GitMind Pro license key for accessing premium features. [Upgrade to Pro](https://gitmind.com/pro) to enable encrypted API key storage and advanced features.",
+          "order": 100
+        },
+        "aiCommitAssistant.pro.encryptionEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable encrypted storage for API keys (Pro feature only)",
+          "markdownDescription": "Enable encrypted storage for API keys using VS Code's SecretStorage API. **Pro Feature**: This feature is only available for GitMind Pro subscribers. API keys are encrypted and stored securely, making them inaccessible to other extensions.",
+          "order": 101
         }
       }
     },

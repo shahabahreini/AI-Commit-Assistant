@@ -35,6 +35,7 @@ const NO_API_KEY_PROVIDERS = ['ollama', 'copilot'];
 
 export function getSettingsScript(settings: ExtensionSettings, nonce: string): string {
   const safeSettings = JSON.stringify(settings).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  const devModeEnabled = process.env.GITMIND_ENCRYPTION_DEV_MODE === 'true';
 
   function generateFormInitialization(): string {
     const formInits: string[] = [
@@ -43,7 +44,10 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
       `document.getElementById('showDiagnostics').checked = currentSettings.showDiagnostics ?? false;`,
       `document.getElementById('telemetryEnabled').checked = currentSettings.telemetry?.enabled ?? true;`,
       `document.getElementById('promptCustomizationEnabled').checked = currentSettings.promptCustomization?.enabled ?? false;`,
-      `document.getElementById('saveLastPrompt').checked = currentSettings.promptCustomization?.saveLastPrompt || false;`
+      `document.getElementById('saveLastPrompt').checked = currentSettings.promptCustomization?.saveLastPrompt || false;`,
+      `// Pro features: use the setting as determined by the backend`,
+      `document.getElementById('encryptionEnabled').checked = currentSettings.pro?.encryptionEnabled ?? false;`,
+      `document.getElementById('proLicenseKey').value = currentSettings.pro?.licenseKey || '';`
     ];
 
     Object.entries(PROVIDER_DEFAULTS).forEach(([provider, defaults]) => {
@@ -89,7 +93,11 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
       },`,
       `commit: { verbose: currentFormValues.commitVerbose },`,
       `showDiagnostics: currentFormValues.showDiagnostics,`,
-      `telemetry: { enabled: currentFormValues.telemetryEnabled }`
+      `telemetry: { enabled: currentFormValues.telemetryEnabled },`,
+      `pro: { 
+        licenseKey: document.getElementById('proLicenseKey').value || '',
+        encryptionEnabled: currentFormValues.encryptionEnabled
+      }`
     );
 
     return `{ ${settingsObj.join('\n        ')} }`;
@@ -102,7 +110,10 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
       `document.getElementById('showDiagnostics').checked = currentSettings.showDiagnostics ?? false;`,
       `document.getElementById('telemetryEnabled').checked = currentSettings.telemetry?.enabled ?? true;`,
       `document.getElementById('promptCustomizationEnabled').checked = currentSettings.promptCustomization?.enabled ?? false;`,
-      `document.getElementById('saveLastPrompt').checked = currentSettings.promptCustomization?.saveLastPrompt || false;`
+      `document.getElementById('saveLastPrompt').checked = currentSettings.promptCustomization?.saveLastPrompt || false;`,
+      `// Pro features: use the setting as determined by the backend`,
+      `document.getElementById('encryptionEnabled').checked = currentSettings.pro?.encryptionEnabled ?? false;`,
+      `document.getElementById('proLicenseKey').value = currentSettings.pro?.licenseKey || '';`
     ];
 
     Object.entries(PROVIDER_DEFAULTS).forEach(([provider, defaults]) => {
@@ -173,7 +184,8 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
         showDiagnostics: document.getElementById('showDiagnostics').checked,
         telemetryEnabled: document.getElementById('telemetryEnabled').checked,
         promptCustomizationEnabled: document.getElementById('promptCustomizationEnabled').checked,
-        saveLastPrompt: document.getElementById('saveLastPrompt').checked
+        saveLastPrompt: document.getElementById('saveLastPrompt').checked,
+        encryptionEnabled: document.getElementById('encryptionEnabled').checked
       };
 
       const newSettings = ${generateSettingsCollection()};
@@ -192,7 +204,7 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
       
       currentSettings = newSettings;
       updateStatusBanner(newSettings);
-      showToast('Settings saved successfully', 'success');
+      showToast('Settings saved successfully', 'success', true);
     }
 
     // Model loading handlers
@@ -310,7 +322,7 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
           break;
           
         case 'settingsSaved':
-          showToast('Settings saved successfully', 'success');
+          showToast('Settings saved successfully', 'success', true);
           break;
           
         case 'apiCheckResult':
@@ -326,6 +338,14 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
           ${generateUpdateSettingsCode()}
           updateVisibleSettings();
           updateStatusBanner(currentSettings);
+          break;
+
+        case 'migrationResult':
+          handleMigrationResult(message);
+          break;
+
+        case 'encryptionStatus':
+          handleEncryptionStatus(message);
           break;
       }
     });
@@ -568,6 +588,330 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
       }
     }
 
+    function handleMigrationResult(message) {
+      const migrateButton = document.getElementById('migrateToSecure');
+      
+      if (migrateButton) {
+        migrateButton.disabled = false;
+        migrateButton.textContent = '🔄 Migrate Keys';
+      }
+      
+      const isAutomatic = message.automatic || false;
+      const iconPrefix = isAutomatic ? '🔄 Auto: ' : '';
+      
+      if (message.success) {
+        showToast(iconPrefix + (message.message || 'API keys migration completed successfully!'), 'success', true);
+      } else {
+        showToast(iconPrefix + 'Migration failed: ' + (message.error || 'Unknown error'), 'error', true);
+      }
+    }
+
+    function handleEncryptionStatus(message) {
+      const statusButton = document.getElementById('checkEncryptionStatus');
+      
+      if (statusButton) {
+        statusButton.disabled = false;
+        statusButton.textContent = '📊 Check Status';
+      }
+      
+      if (message.status) {
+        const { status, providersWithKeys } = message;
+        let statusMessage = \`Encryption Status: \${status.enabled ? 'Enabled' : 'Disabled'}\\n\`;
+        statusMessage += \`Available: \${status.available ? 'Yes' : 'No'}\\n\`;
+        statusMessage += \`Reason: \${status.reason}\\n\`;
+        
+        if (providersWithKeys && providersWithKeys.length > 0) {
+          statusMessage += \`\\nProviders with encrypted keys: \${providersWithKeys.join(', ')}\`;
+        } else {
+          statusMessage += '\\nNo encrypted keys found';
+        }
+        
+        // Show detailed status in a modal-style display
+        showDetailedStatus('Encryption Status Report', statusMessage);
+        showToast('Encryption status checked successfully', 'success', true);
+      } else {
+        showToast('Failed to check encryption status: ' + (message.error || 'Unknown error'), 'error', true);
+      }
+    }
+
+    function showToast(message, type = 'success', persistent = false) {
+      // Enhanced notification system that stays at the top of settings
+      const container = document.body;
+      
+      // Remove existing toasts if too many (keep max 3)
+      const existingToasts = container.querySelectorAll('.notification-toast');
+      if (existingToasts.length >= 3) {
+        existingToasts[0].remove();
+      }
+      
+      const toast = document.createElement('div');
+      toast.className = \`notification-toast toast-\${type}\`;
+      
+      // Add icon based on type
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+      
+      toast.innerHTML = \`
+        <div class="toast-content">
+          <span class="toast-icon">\${icon}</span>
+          <span class="toast-message">\${message}</span>
+          \${persistent ? '<button class="toast-close" onclick="this.parentElement.parentElement.remove()">×</button>' : ''}
+        </div>
+      \`;
+      
+      // Enhanced styling with better visibility
+      toast.style.cssText = \`
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: \${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#2196F3'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        z-index: 20000;
+        min-width: 300px;
+        max-width: 600px;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideInFromTop 0.4s ease-out;
+        margin-bottom: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      \`;
+      
+      // Add styles if not already present
+      if (!document.getElementById('enhanced-toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'enhanced-toast-styles';
+        style.textContent = \`
+          @keyframes slideInFromTop {
+            from {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+          }
+          
+          @keyframes slideOutToTop {
+            from {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+            to {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-30px);
+            }
+          }
+          
+          .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          
+          .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+          }
+          
+          .toast-message {
+            flex: 1;
+            line-height: 1.4;
+          }
+          
+          .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 4px;
+            margin-left: 8px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex-shrink: 0;
+            opacity: 0.8;
+            transition: all 0.2s;
+          }
+          
+          .toast-close:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+          }
+        \`;
+        document.head.appendChild(style);
+      }
+      
+      container.appendChild(toast);
+      
+      // Auto-remove after longer duration (unless persistent)
+      if (!persistent) {
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.style.animation = 'slideOutToTop 0.4s ease-in';
+            setTimeout(() => {
+              if (toast.parentNode) {
+                toast.remove();
+              }
+            }, 400);
+          }
+        }, 8000); // Extended to 8 seconds
+      } else {
+        // Add persistent indicator
+        const persistentText = document.createElement('div');
+        persistentText.textContent = '';
+        persistentText.style.cssText = \`
+          font-size: 12px;
+          opacity: 0.9;
+          margin-top: 4px;
+          text-align: center;
+        \`;
+        toast.querySelector('.toast-content').appendChild(persistentText);
+      }
+    }
+
+    function showDetailedStatus(title, message) {
+      // Create a modal-style overlay for detailed status
+      const existingModal = document.querySelector('.status-modal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      const modal = document.createElement('div');
+      modal.className = 'status-modal';
+      modal.innerHTML = \`
+        <div class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>\${title}</h3>
+              <button class="modal-close" onclick="this.closest('.status-modal').remove()">×</button>
+            </div>
+            <div class="modal-body">
+              <pre class="status-details">\${message}</pre>
+            </div>
+            <div class="modal-footer">
+              <button class="secondary-button" onclick="this.closest('.status-modal').remove()">Close</button>
+            </div>
+          </div>
+        </div>
+      \`;
+      
+      modal.style.cssText = \`
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      \`;
+      
+      // Add styles for modal components
+      const style = document.createElement('style');
+      style.textContent = \`
+        .modal-overlay {
+          background: rgba(0, 0, 0, 0.5);
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .modal-content {
+          background: var(--vscode-editor-background);
+          border: 1px solid var(--vscode-widget-border);
+          border-radius: 8px;
+          max-width: 600px;
+          width: 100%;
+          max-height: 80vh;
+          overflow: hidden;
+          animation: modalFadeIn 0.2s ease-out;
+        }
+        .modal-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--vscode-widget-border);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .modal-header h3 {
+          margin: 0;
+          color: var(--vscode-foreground);
+        }
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: var(--vscode-foreground);
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          border-radius: 4px;
+        }
+        .modal-close:hover {
+          background: var(--vscode-toolbar-hoverBackground);
+        }
+        .modal-body {
+          padding: 20px;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+        .status-details {
+          font-family: var(--vscode-editor-font-family);
+          font-size: 13px;
+          line-height: 1.4;
+          margin: 0;
+          color: var(--vscode-foreground);
+          white-space: pre-wrap;
+          background: var(--vscode-textCodeBlock-background);
+          padding: 12px;
+          border-radius: 4px;
+        }
+        .modal-footer {
+          padding: 16px 20px;
+          border-top: 1px solid var(--vscode-widget-border);
+          text-align: right;
+        }
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      \`;
+      
+      modal.appendChild(style);
+      document.body.appendChild(modal);
+      
+      // Close on ESC key
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+          modal.remove();
+          document.removeEventListener('keydown', handleEsc);
+        }
+      };
+      document.addEventListener('keydown', handleEsc);
+      
+      // Close on overlay click
+      modal.querySelector('.modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+          modal.remove();
+          document.removeEventListener('keydown', handleEsc);
+        }
+      });
+    }
+
     // Event listeners
     document.getElementById('loadMistralModels')?.addEventListener('click', () => 
       handleModelLoad('mistral', ['mistral-tiny', 'mistral-small', 'mistral-medium', 'mistral-large-latest'], 'ai-commit-assistant.loadMistralModels')
@@ -583,6 +927,48 @@ export function getSettingsScript(settings: ExtensionSettings, nonce: string): s
     );
 
     document.getElementById('copilotModel')?.addEventListener('change', saveSettings);
+
+    // Pro Features handlers
+    document.getElementById('encryptionEnabled')?.addEventListener('change', function() {
+      const checked = this.checked;
+      console.log('Encryption toggle changed:', checked);
+      
+      // Update the setting immediately for UI responsiveness
+      vscode.postMessage({
+        command: 'updateSetting',
+        key: 'pro.encryptionEnabled',
+        value: checked
+      });
+    });
+
+    document.getElementById('proLicenseKey')?.addEventListener('change', function() {
+      const licenseKey = this.value.trim();
+      vscode.postMessage({
+        command: 'updateSetting',
+        key: 'pro.licenseKey',
+        value: licenseKey
+      });
+    });
+
+    document.getElementById('migrateToSecure')?.addEventListener('click', function() {
+      console.log('Migrate to secure clicked');
+      this.disabled = true;
+      this.textContent = '🔄 Migrating...';
+      
+      vscode.postMessage({
+        command: 'migrateToSecure'
+      });
+    });
+
+    document.getElementById('checkEncryptionStatus')?.addEventListener('click', function() {
+      console.log('Check encryption status clicked');
+      this.disabled = true;
+      this.textContent = '📊 Checking...';
+      
+      vscode.postMessage({
+        command: 'checkEncryptionStatus'
+      });
+    });
 
     document.getElementById('apiProvider')?.addEventListener('change', function() {
       const provider = this.value;

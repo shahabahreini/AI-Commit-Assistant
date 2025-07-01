@@ -400,6 +400,324 @@ export function getMainStyles(): string {
       color: #f39c12;
     }
 
+    /* Pro Features Styles */
+    .pro-features-section {
+      background: linear-gradient(135deg, 
+        var(--vscode-editor-background) 0%, 
+        var(--vscode-input-border, rgba(128, 128, 128, 0.05)) 100%);
+      border: 1px solid var(--vscode-input-border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .pro-features-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: var(--vscode-foreground);
+      border-bottom: 1px solid var(--vscode-input-border);
+      padding-bottom: 8px;
+    }
+
+    .pro-icon {
+      font-size: 18px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    .upgrade-badge {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: auto;
+    }
+
+    .pro-badge {
+      background: linear-gradient(135deg, #00d2d3, #54a0ff);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: auto;
+    }
+
+    .upgrade-prompt {
+      background: linear-gradient(135deg, 
+        rgba(255, 107, 107, 0.08) 0%, 
+        rgba(238, 90, 36, 0.12) 100%);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-left: 4px solid #ff6b6b;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .upgrade-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .upgrade-text {
+      flex: 1;
+    }
+
+    .upgrade-text h4 {
+      margin: 0 0 8px 0;
+      color: var(--vscode-foreground);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .upgrade-text p {
+      margin: 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .upgrade-button {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .upgrade-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+    }
+
+    .pro-feature-item {
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--vscode-input-border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .feature-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .feature-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .feature-info h4 {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--vscode-foreground);
+    }
+
+    .feature-description {
+      margin: 0;
+      font-size: 13px;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.4;
+    }
+
+    .feature-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .compact-toggle-row.disabled {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .toggle-slider.disabled {
+      background-color: var(--vscode-input-border);
+      cursor: not-allowed;
+    }
+
+    .compact-label.disabled {
+      color: var(--vscode-descriptionForeground);
+      cursor: not-allowed;
+    }
+
+    .encryption-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .secondary-button {
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+      border: 1px solid var(--vscode-input-border);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .secondary-button:hover {
+      background: var(--vscode-button-secondaryHoverBackground);
+      border-color: var(--vscode-focusBorder);
+    }
+
+    .future-features-preview {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--vscode-textBlockQuote-background);
+      border-left: 4px solid var(--vscode-textBlockQuote-border);
+      border-radius: 4px;
+    }
+
+    .future-features-preview h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--vscode-foreground);
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--vscode-input-border);
+    }
+
+    .feature-item:last-child {
+      border-bottom: none;
+    }
+
+    .feature-item.coming-soon {
+      opacity: 0.7;
+    }
+
+    .feature-name {
+      flex: 1;
+      font-size: 13px;
+      color: var(--vscode-foreground);
+    }
+
+    .coming-soon-badge {
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .pro-license-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--vscode-input-border);
+    }
+
+    .pro-license-section input.verified {
+      border-color: #28a745;
+      background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    .required {
+      color: #dc3545;
+      font-weight: 600;
+    }
+
+    .verified {
+      color: #28a745;
+      font-weight: 600;
+    }
+
+    .dev-mode-notice {
+      background: linear-gradient(135deg, 
+        rgba(255, 193, 7, 0.08) 0%, 
+        rgba(255, 193, 7, 0.12) 100%);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-left: 4px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 16px;
+    }
+
+    .notice-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .dev-icon {
+      font-size: 16px;
+    }
+
+    .dev-mode-notice p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.4;
+    }
+
+    .dev-mode-notice code {
+      background: var(--vscode-textCodeBlock-background);
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    /* Toast animations */
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
     ${getFormStyles()}
     ${getButtonStyles()}
     ${getStatusBannerStyles()}

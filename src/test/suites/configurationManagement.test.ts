@@ -32,7 +32,7 @@ suite('Configuration Management Tests', () => {
         }
     });
 
-    test('API configuration should be retrievable for all providers', () => {
+    test('API configuration should be retrievable for all providers', async () => {
         const providers = [
             'gemini', 'openai', 'anthropic', 'huggingface', 'ollama',
             'mistral', 'cohere', 'together', 'openrouter', 'copilot',
@@ -64,7 +64,7 @@ suite('Configuration Management Tests', () => {
             (vscode.workspace as any).getConfiguration = () => mockConfig;
 
             try {
-                const config = getApiConfig();
+                const config = await getApiConfig();
                 assert.strictEqual(config.type, provider, `Should load ${provider} configuration`);
             } catch (error) {
                 console.log(`${provider} configuration test completed`);

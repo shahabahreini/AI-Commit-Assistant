@@ -66,4 +66,9 @@ export interface ExtensionSettings {
     commit?: {
         verbose: boolean;
     };
+    // Pro Features Settings
+    pro?: {
+        licenseKey?: string;
+        encryptionEnabled?: boolean;
+    };
 }

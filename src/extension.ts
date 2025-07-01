@@ -17,6 +17,7 @@ import { fetchMistralModels } from "./services/api/mistral";
 import { fetchHuggingFaceModels } from "./services/api/huggingface";
 import { PromptManager } from "./services/promptManager";
 import { telemetryService } from "./services/telemetry/telemetryService";
+import { SecureKeyManager } from "./services/encryption/SecureKeyManager";
 
 // Constants
 const TIMEOUT_DURATION = 60000;
@@ -112,7 +113,7 @@ async function sendApiCheckResult(result: any, provider: string): Promise<void> 
   }
 
   if (OnboardingWebview.isWebviewOpen()) {
-    const apiConfig = getApiConfig();
+    const apiConfig = await getApiConfig();
     OnboardingWebview.postMessageToWebview({
       command: 'updateConfigStatus',
       status: { hasApiKey: hasApiKey(apiConfig) }
@@ -136,7 +137,7 @@ async function sendApiCheckResult(result: any, provider: string): Promise<void> 
 // Command Handlers
 async function handleGenerateCommit(): Promise<void> {
   const startTime = Date.now();
-  const apiConfig = getApiConfig();
+  const apiConfig = await getApiConfig();
   let isGenerating = false;
   let loadingItem: vscode.StatusBarItem | undefined;
 
@@ -224,7 +225,7 @@ async function handleGenerateCommit(): Promise<void> {
 
 async function handleApiSetupCheck(): Promise<void> {
   const startTime = Date.now();
-  const apiConfig = getApiConfig();
+  const apiConfig = await getApiConfig();
   const provider = apiConfig.type;
 
   try {
@@ -265,7 +266,7 @@ async function handleApiSetupCheck(): Promise<void> {
 }
 
 async function handleRateLimitsCheck(): Promise<void> {
-  const apiConfig = getApiConfig();
+  const apiConfig = await getApiConfig();
   const provider = apiConfig.type;
 
   try {
@@ -328,7 +329,7 @@ async function handleLoadModels(
   fetchFunction: (apiKey: string) => Promise<any[]>
 ): Promise<void> {
   try {
-    const config = getApiConfig();
+    const config = await getApiConfig();
     const isCorrectType = config.type === modelType;
     const hasKey = 'apiKey' in config && config.apiKey;
 
@@ -507,7 +508,7 @@ function registerCommands(context: vscode.ExtensionContext): vscode.Disposable[]
 
     vscode.commands.registerCommand("ai-commit-assistant.checkApiConfig", async () => {
       try {
-        const apiConfig = getApiConfig();
+        const apiConfig = await getApiConfig();
         const hasKey = hasApiKey(apiConfig);
 
         if (OnboardingWebview.isWebviewOpen()) {
@@ -567,6 +568,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   initializeLogger(state.debugChannel);
   debugLog("AI Commit Assistant is now active");
 
+  // Initialize SecureKeyManager
+  const secureKeyManager = SecureKeyManager.getInstance();
+  secureKeyManager.initialize(context);
+  debugLog("SecureKeyManager initialized");
+
+  // Auto-migrate based on user status (handle free users with encryption enabled)
+  await secureKeyManager.autoMigrateBasedOnUserStatus();
+
   await telemetryService.initialize(context);
   // Track daily active user on extension activation
   telemetryService.trackDailyActiveUser();
@@ -595,6 +604,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Removed non-essential telemetry tracking
   } else {
     // Removed non-essential telemetry tracking
+  }
+
+  // Auto-migrate API keys for pro users
+  try {
+    if (secureKeyManager.isEncryptionAvailable()) {
+      await secureKeyManager.migrateToSecureStorage();
+    }
+  } catch (error) {
+    debugLog("Auto-migration failed:", error);
+    // Don't show error to user as this is optional
   }
 
   const gitExtension = vscode.extensions.getExtension("vscode.git");

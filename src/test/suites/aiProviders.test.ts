@@ -47,7 +47,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'gemini');
             assert.strictEqual(config.apiKey, 'test-gemini-key');
             assert.strictEqual(config.model, 'gemini-2.5-flash');
@@ -66,7 +66,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'openai');
             assert.strictEqual(config.apiKey, 'test-openai-key');
             assert.strictEqual(config.model, 'gpt-4o');
@@ -84,7 +84,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'anthropic');
             assert.strictEqual(config.apiKey, 'test-anthropic-key');
             assert.strictEqual(config.model, 'claude-3-5-sonnet-20241022');
@@ -102,7 +102,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'huggingface');
             assert.strictEqual(config.apiKey, 'test-hf-key');
             assert.strictEqual(config.model, 'microsoft/DialoGPT-medium');
@@ -120,7 +120,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'ollama');
             assert.strictEqual(config.url, 'http://localhost:11434');
             assert.strictEqual(config.model, 'llama3.3');
@@ -138,7 +138,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'mistral');
             assert.strictEqual(config.apiKey, 'test-mistral-key');
             assert.strictEqual(config.model, 'mistral-large-latest');
@@ -156,7 +156,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'cohere');
             assert.strictEqual(config.apiKey, 'test-cohere-key');
             assert.strictEqual(config.model, 'command-a-03-2025');
@@ -174,7 +174,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'together');
             assert.strictEqual(config.apiKey, 'test-together-key');
             assert.strictEqual(config.model, 'meta-llama/Llama-3.3-70B-Instruct-Turbo');
@@ -192,7 +192,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'openrouter');
             assert.strictEqual(config.apiKey, 'test-openrouter-key');
             assert.strictEqual(config.model, 'google/gemma-3-27b-it:free');
@@ -209,7 +209,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'copilot');
             assert.strictEqual(config.model, 'gpt-4o');
         } catch (error) {
@@ -226,7 +226,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'deepseek');
             assert.strictEqual(config.apiKey, 'test-deepseek-key');
             assert.strictEqual(config.model, 'deepseek-chat');
@@ -244,7 +244,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'grok');
             assert.strictEqual(config.apiKey, 'test-grok-key');
             assert.strictEqual(config.model, 'grok-3');
@@ -262,7 +262,7 @@ suite('AI Providers Tests', () => {
         (vscode.workspace as any).getConfiguration = () => mockConfig;
 
         try {
-            const config = getApiConfig();
+            const config = await getApiConfig();
             assert.strictEqual(config.type, 'perplexity');
             assert.strictEqual(config.apiKey, 'test-perplexity-key');
             assert.strictEqual(config.model, 'sonar-pro');
@@ -338,7 +338,7 @@ index 123..456 789
 
             try {
                 // Get the API config first
-                const config = getApiConfig();
+                const config = await getApiConfig();
                 // This will likely fail due to invalid API keys, but we're testing the flow
                 await generateCommitMessage(config, testDiff);
             } catch (error) {
